@@ -3,6 +3,8 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import * as TWEEN from "@tweenjs/tween.js";
 import getStarfield from "./getStarfield";
 import getFresnelMat from "./getFresnelMat";
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+
 
 const TILT = -23.5 * (Math.PI / 180);
 const spaceColor = new THREE.Color(0x000000);
@@ -213,6 +215,10 @@ function animateCameraToEarth() {
     console.log('hi')
   }, 1000)
 
+  const treeGeometry = new THREE.CylinderGeometry(0.1, 0.1, 1, 32);
+  const treeMaterial = new THREE.MeshBasicMaterial({ color: 0x228B22 });
+  const tree = new THREE.Mesh(treeGeometry, treeMaterial);
+
   new TWEEN.Tween(camera.position)
     .to(targetPosition, duration * acceleration)
     .easing(TWEEN.Easing.Quadratic.InOut)
@@ -220,6 +226,8 @@ function animateCameraToEarth() {
     .onComplete(() => {
         scene.background.set(atmosphereColor);
         scene.remove(sun, earthGroup, moon, stars, galaxy, lines);
+        scene.add(tree);  
+
     })
     .start();
 

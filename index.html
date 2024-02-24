@@ -7,15 +7,26 @@
   <title>ZA</title>
   <link rel="stylesheet" href="styles.css" />
   <link href="i18n.json" rel="localization" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Protest+Strike&display=swap" rel="stylesheet">    
+  
 </head>
 
 <body>
   <div id="app"></div>
 
   <div class="overlay">
-    <h1 class="intro__text show">
-      Help! I am lost in space. Can you go back to Earth and help me find my way back home? Check my garden.
+    <h1 class="intro__text show trigger-point">
+      print("Hello, World!")
     </h1>
+    <h1 class="intro__text show trigger-point">
+      >> Hello, World! I'm Zyad, a full stack developer and a student at the University of Cincinnati.
+    </h1>
+    <span class="intro__scroll">
+      <span class="intro__scroll__text">Scroll</span>
+      <span class="intro__scroll__icon"></span>
+    </span>
     <h1 class="intro__text">
       Hi! My name is Zyad. I'm a full stack developer 
       and a student at the University of Cincinnati. My journey in the tech world is driven by a desire to come to a moment of enlightenment where code becomes magic.
@@ -33,6 +44,8 @@
       and a student at the University of Cincinnati. My journey in the tech world is driven by a desire to come to a moment of enlightenment where code becomes magic.
     </h1>
   </div>
+  <!-- script for intersection observer -->
+
   <script id="experience" type="module" src="/experience.js"></script>
 </body>
 
