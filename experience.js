@@ -4,11 +4,12 @@ import * as TWEEN from "@tweenjs/tween.js";
 import getStarfield from "./getStarfield";
 import getFresnelMat from "./getFresnelMat";
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import * as dat from 'dat.gui';
 
 
 const TILT = -23.5 * (Math.PI / 180);
 const spaceColor = new THREE.Color(0x000000);
-const atmosphereColor = new THREE.Color(0x5175A7);
+const atmosphereColor = new THREE.Color(0x448EE4);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(spaceColor);
@@ -204,9 +205,39 @@ function onFirstScroll() {
   }
 }
 
+const gui = new dat.GUI();
+
+let cloudModels = []; 
+const loader = new GLTFLoader();
+loader.load('cloud_1.glb', (gltf) => {
+  const originalCloud = gltf.scene;
+
+  for (let i = 0; i < 5; i++) { 
+    const cloudClone = originalCloud.clone();
+
+    if (i === 0) {
+      cloudClone.position.set(-130, 13, 0);
+    }
+    if (i === 1) {
+      cloudClone.position.set(-90, 2, 3);
+    }
+    if (i === 2) {
+      cloudClone.position.set(-50, 11, 5);
+    }
+    if (i === 3) {
+      cloudClone.position.set(-10, 7, 2);
+    }
+    if (i === 4) {
+      cloudClone.position.set(40, 3, 7);
+    }
+    
+    cloudModels.push(cloudClone);
+  }
+});
+
 function animateCameraToEarth() {
   const targetPosition = { z: 5- .75 };
-  const duration = 2500;
+  const duration = 2100;
   const acceleration = 1.5;
 
   scene.add(lines);
@@ -218,6 +249,19 @@ function animateCameraToEarth() {
   const treeGeometry = new THREE.CylinderGeometry(0.1, 0.1, 1, 32);
   const treeMaterial = new THREE.MeshBasicMaterial({ color: 0x228B22 });
   const tree = new THREE.Mesh(treeGeometry, treeMaterial);
+  const onEarthSunGeometry = new THREE.CircleGeometry(10, 32);
+  const onEarthSunMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+  const onEarthSun = new THREE.Mesh(onEarthSunGeometry, onEarthSunMaterial);
+  onEarthSun.scale.set(3, 3, 3);
+  onEarthSun.position.set(60, 25, -50);
+
+  const sunFolder = gui.addFolder('Sun'); 
+  sunFolder.add(onEarthSun.position, 'x', -30, 30).name('X Position').listen();
+  sunFolder.add(onEarthSun.position, 'y', -30, 30).name('Y Position').listen();
+  sunFolder.add(onEarthSun.position, 'z', -30, 30).name('Z Position').listen();
+  sunFolder.open();
+
+  const element = document.querySelector('.space');
 
   new TWEEN.Tween(camera.position)
     .to(targetPosition, duration * acceleration)
@@ -226,8 +270,11 @@ function animateCameraToEarth() {
     .onComplete(() => {
         scene.background.set(atmosphereColor);
         scene.remove(sun, earthGroup, moon, stars, galaxy, lines);
-        scene.add(tree);  
-
+        element.remove();
+        scene.add(onEarthSun);
+        for (let i = 0; i < cloudModels.length; i++) {
+          scene.add(cloudModels[i]);
+        }
     })
     .start();
 
@@ -237,6 +284,13 @@ function animateCameraToEarth() {
   }
   updateTweens();
 }
+
+// white effect of like clouds moving out of the way 
+// 2d landing on earth
+// then 3d tree with projects
+// garden end with skills as flowers
+// contact form as a bird flying away
+// 3d model of me
 
 window.addEventListener("scroll", onFirstScroll);
 
@@ -268,6 +322,18 @@ function animate() {
 
   if (stars) {
     stars.rotation.y -= 0.0002
+  }
+
+  if (cloudModels.length > 0) {
+
+    for (let i = 0; i < cloudModels.length; i++) {
+      if (cloudModels[i].position.x > 80) {
+        cloudModels[i].position.x = -130;
+      }
+      else {
+        cloudModels[i].position.x += 5 * delta;
+      }
+    }
   }
 
   if (lines){

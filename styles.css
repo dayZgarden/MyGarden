@@ -27,7 +27,7 @@ canvas {
   display: block;
 }
 
-.overlay {
+.space {
   position: absolute;
   width: 100vw;
   color:white;
@@ -35,7 +35,7 @@ canvas {
   margin: 0 auto;
   padding: 120px 0;
   color: white;
-  height: 100vh;
+  height: 101vh;
 }
 
 .protest-strike-regular {
