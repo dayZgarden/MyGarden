@@ -205,7 +205,7 @@ function onFirstScroll() {
   }
 }
 
-const gui = new dat.GUI();
+// const gui = new dat.GUI();
 
 let cloudModels = []; 
 const loader = new GLTFLoader();
@@ -255,12 +255,6 @@ function animateCameraToEarth() {
   onEarthSun.scale.set(3, 3, 3);
   onEarthSun.position.set(60, 25, -50);
 
-  const sunFolder = gui.addFolder('Sun'); 
-  sunFolder.add(onEarthSun.position, 'x', -30, 30).name('X Position').listen();
-  sunFolder.add(onEarthSun.position, 'y', -30, 30).name('Y Position').listen();
-  sunFolder.add(onEarthSun.position, 'z', -30, 30).name('Z Position').listen();
-  sunFolder.open();
-
   const element = document.querySelector('.space');
 
   new TWEEN.Tween(camera.position)
@@ -275,6 +269,7 @@ function animateCameraToEarth() {
         for (let i = 0; i < cloudModels.length; i++) {
           scene.add(cloudModels[i]);
         }
+        document.querySelector('.earth').classList.add('show_text');
     })
     .start();
 
