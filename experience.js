@@ -257,12 +257,42 @@ function animateCameraToEarth() {
 
   const element = document.querySelector('.space');
 
+  const vertexShader = `
+  varying vec3 vNormal;
+  void main() {
+    vNormal = normal;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+  `;
+  const fragmentShader = `
+  varying vec3 vNormal;
+  uniform vec3 color;
+  void main() {
+    float intensity = pow(0.5 - dot(vNormal, vec3(0, 0, 1)), 2.0);
+    vec3 skyColor = color * intensity;
+    gl_FragColor = vec4(skyColor, 1.0);
+  }
+  `;
+  const uniforms = {
+    color: { value: new THREE.Color(0x448EE4) },
+  };
+  const skyMaterial = new THREE.ShaderMaterial({
+    uniforms: uniforms,
+    vertexShader: vertexShader,
+    fragmentShader: fragmentShader,
+  });
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(100, 32, 32), skyMaterial);
+  sky.material.side = THREE.BackSide;
+
+
+
   new TWEEN.Tween(camera.position)
     .to(targetPosition, duration * acceleration)
     .easing(TWEEN.Easing.Quadratic.InOut)
     .onUpdate(() => camera.lookAt(earth.position))
     .onComplete(() => {
         scene.background.set(atmosphereColor);
+        // scene.add(sky);
         scene.remove(sun, earthGroup, moon, stars, galaxy, lines);
         element.remove();
         scene.add(onEarthSun);
