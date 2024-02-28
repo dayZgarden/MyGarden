@@ -3,13 +3,12 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import * as TWEEN from "@tweenjs/tween.js";
 import getStarfield from "./getStarfield";
 import getFresnelMat from "./getFresnelMat";
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import * as dat from 'dat.gui';
-
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import * as dat from "dat.gui";
 
 const TILT = -23.5 * (Math.PI / 180);
 const spaceColor = new THREE.Color(0x000000);
-const atmosphereColor = new THREE.Color(0x448EE4);
+const atmosphereColor = new THREE.Color(0x448ee4);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(spaceColor);
@@ -20,7 +19,7 @@ const camera = new THREE.PerspectiveCamera(
   1000
 );
 camera.position.set(0, 0, 20);
-const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true});
+const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -31,7 +30,7 @@ controls.enableRotate = true;
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-const ambientLight = new THREE.AmbientLight(0xffffff, .5);
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
 scene.add(ambientLight);
 
 const sunLight = new THREE.DirectionalLight(0xffffff, 2);
@@ -67,7 +66,6 @@ earthGroup.scale.set(2.5, 2.5, 2.5);
 const lightMaterial = new THREE.MeshStandardMaterial({
   map: textureLoader.load("lights.jpg"),
   blending: THREE.AdditiveBlending,
-
 });
 const lightMesh = new THREE.Mesh(earthGeometry, lightMaterial);
 
@@ -76,7 +74,7 @@ const cloudMaterial = new THREE.MeshStandardMaterial({
   blending: THREE.NormalBlending,
   transparent: true,
   opacity: 0.25,
-  alphaMap: textureLoader.load('alphamap.jpg'),
+  alphaMap: textureLoader.load("alphamap.jpg"),
 });
 
 const cloudMesh = new THREE.Mesh(earthGeometry, cloudMaterial);
@@ -144,19 +142,25 @@ function moonOrbitEarth() {
   }
 }
 
-let stars = getStarfield({ numStars: 1000 })
-scene.add(stars)
+let stars = getStarfield({ numStars: 1000 });
+scene.add(stars);
 
 let LINE_COUNT = 3000;
 let geom = new THREE.BufferGeometry();
-geom.setAttribute("position", new THREE.BufferAttribute(new Float32Array(6*LINE_COUNT), 3));
-geom.setAttribute("velocity", new THREE.BufferAttribute(new Float32Array(2*LINE_COUNT), 1));
+geom.setAttribute(
+  "position",
+  new THREE.BufferAttribute(new Float32Array(6 * LINE_COUNT), 3)
+);
+geom.setAttribute(
+  "velocity",
+  new THREE.BufferAttribute(new Float32Array(2 * LINE_COUNT), 1)
+);
 let pos = geom.getAttribute("position");
 let pa = pos.array;
 let vel = geom.getAttribute("velocity");
 let va = vel.array;
 
-for (let line_index= 0; line_index < LINE_COUNT; line_index++) {
+for (let line_index = 0; line_index < LINE_COUNT; line_index++) {
   var x = Math.random() * 400 - 200;
   var y = Math.random() * 200 - 100;
   var z = Math.random() * 500 - 100;
@@ -164,25 +168,25 @@ for (let line_index= 0; line_index < LINE_COUNT; line_index++) {
   var yy = y;
   var zz = z;
 
-  pa[6*line_index] = x;
-  pa[6*line_index+1] = y;
-  pa[6*line_index+2] = z;
+  pa[6 * line_index] = x;
+  pa[6 * line_index + 1] = y;
+  pa[6 * line_index + 2] = z;
 
-  pa[6*line_index+3] = xx;
-  pa[6*line_index+4] = yy;
-  pa[6*line_index+5] = zz;
+  pa[6 * line_index + 3] = xx;
+  pa[6 * line_index + 4] = yy;
+  pa[6 * line_index + 5] = zz;
 
-  va[2*line_index] = va[2*line_index+1]= 0;
+  va[2 * line_index] = va[2 * line_index + 1] = 0;
 }
-let mat = new THREE.LineBasicMaterial({color: 0xffffff});
+let mat = new THREE.LineBasicMaterial({ color: 0xffffff });
 let lines = new THREE.LineSegments(geom, mat);
 
 let galaxy;
 
 const galaxyGeometry = new THREE.SphereGeometry(65, 50, 50);
 const galaxyMaterial = new THREE.MeshStandardMaterial({
-color: 0x000000,
-side: THREE.BackSide,
+  color: 0x000000,
+  side: THREE.BackSide,
 });
 galaxy = new THREE.Mesh(galaxyGeometry, galaxyMaterial);
 galaxy.position.set(90, 50, -50);
@@ -199,7 +203,7 @@ let hasScrolled = false;
 function onFirstScroll() {
   if (!hasScrolled) {
     hasScrolled = true;
-    document.querySelector('.show').classList.remove('show');
+    document.querySelector(".show").classList.remove("show");
     animateCameraToEarth();
     document.body.removeEventListener("scroll", onFirstScroll);
   }
@@ -207,99 +211,111 @@ function onFirstScroll() {
 
 // const gui = new dat.GUI();
 
-let cloudModels = []; 
+let cloudModels = [];
 const loader = new GLTFLoader();
-loader.load('cloud_1.glb', (gltf) => {
+loader.load("cloud_1.glb", (gltf) => {
   const originalCloud = gltf.scene;
 
-  for (let i = 0; i < 5; i++) { 
+  for (let i = 0; i < 15; i++) {
     const cloudClone = originalCloud.clone();
 
-    if (i === 0) {
-      cloudClone.position.set(-130, 13, 0);
-    }
-    if (i === 1) {
-      cloudClone.position.set(-90, 2, 3);
-    }
-    if (i === 2) {
-      cloudClone.position.set(-50, 11, 5);
-    }
-    if (i === 3) {
-      cloudClone.position.set(-10, 7, 2);
-    }
-    if (i === 4) {
-      cloudClone.position.set(40, 3, 7);
-    }
-    
+    cloudClone.scale.set(0.5, 0.5, 0.5);
+    cloudClone.position.set(
+      Math.random() * 200 - 100,
+      Math.random() * 12 + 6,
+      Math.random() * -10 - 10
+    );
+
     cloudModels.push(cloudClone);
   }
 });
 
+const backgroundTexture = textureLoader.load("skybackground.jpg");
+backgroundTexture.wrapS = THREE.ClampToEdgeWrapping;
+backgroundTexture.wrapT = THREE.ClampToEdgeWrapping;
+backgroundTexture.minFilter = THREE.LinearFilter;
+
+let height = 100;
+
+const aspectRatio = window.innerWidth / window.innerHeight;
+const backgroundGeometry = new THREE.PlaneGeometry(
+  200 * aspectRatio,
+  height * aspectRatio
+);
+const backgroundMaterial = new THREE.MeshBasicMaterial({
+  map: backgroundTexture,
+});
+const backgroundMesh = new THREE.Mesh(backgroundGeometry, backgroundMaterial);
+backgroundMaterial.map = backgroundTexture;
+backgroundMaterial.map.minFilter = THREE.LinearFilter;
+backgroundMaterial.needsUpdate = true;
+backgroundMesh.position.set(0, 0, -100);
+
+// sphere sun on earth
+const onEarthSunGeometry = new THREE.SphereGeometry(7, 50, 50);
+const onEarthSunMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+const onEarthSun = new THREE.Mesh(onEarthSunGeometry, onEarthSunMaterial);
+onEarthSun.scale.set(2, 2, 2);
+onEarthSun.position.set(80, 35, -50);
+
+let balloonModel;
+
+const balloon = new GLTFLoader();
+balloon.load("hot_air_balloon.glb", (gltf) => {
+  balloonModel = gltf.scene;
+  balloonModel.scale.set(0.2, 0.2, 0.2);
+  balloonModel.position.set(-15,-2, -10);
+});
+
+let airplaneModel;
+
+const airplane = new GLTFLoader();
+airplane.load("airplane.glb", (gltf) => {
+  airplaneModel = gltf.scene;
+  airplaneModel.scale.set(0.05, 0.05, 0.05);
+  airplaneModel.position.set(15,-2, -10);
+  airplaneModel.rotation.y = -Math.PI;
+});
+
+let birdModel;
+
+const bird = new GLTFLoader();
+bird.load("bird.glb", (gltf) => {
+  birdModel = gltf.scene;
+  birdModel.scale.set(5, 5, 5);
+  birdModel.position.set(0,-2, -10);
+  birdModel.rotation.y = -Math.PI / 2;
+});
+
 function animateCameraToEarth() {
-  const targetPosition = { z: 5- .75 };
+  const targetPosition = { z: 5 - 0.75 };
   const duration = 2100;
   const acceleration = 1.5;
 
   scene.add(lines);
 
   setTimeout(() => {
-    console.log('hi')
-  }, 1000)
+    console.log("hi");
+  }, 1000);
 
-  const treeGeometry = new THREE.CylinderGeometry(0.1, 0.1, 1, 32);
-  const treeMaterial = new THREE.MeshBasicMaterial({ color: 0x228B22 });
-  const tree = new THREE.Mesh(treeGeometry, treeMaterial);
-  const onEarthSunGeometry = new THREE.CircleGeometry(10, 32);
-  const onEarthSunMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-  const onEarthSun = new THREE.Mesh(onEarthSunGeometry, onEarthSunMaterial);
-  onEarthSun.scale.set(3, 3, 3);
-  onEarthSun.position.set(60, 25, -50);
-
-  const element = document.querySelector('.space');
-
-  const vertexShader = `
-  varying vec3 vNormal;
-  void main() {
-    vNormal = normal;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-  `;
-  const fragmentShader = `
-  varying vec3 vNormal;
-  uniform vec3 color;
-  void main() {
-    float intensity = pow(0.5 - dot(vNormal, vec3(0, 0, 1)), 2.0);
-    vec3 skyColor = color * intensity;
-    gl_FragColor = vec4(skyColor, 1.0);
-  }
-  `;
-  const uniforms = {
-    color: { value: new THREE.Color(0x448EE4) },
-  };
-  const skyMaterial = new THREE.ShaderMaterial({
-    uniforms: uniforms,
-    vertexShader: vertexShader,
-    fragmentShader: fragmentShader,
-  });
-  const sky = new THREE.Mesh(new THREE.SphereGeometry(100, 32, 32), skyMaterial);
-  sky.material.side = THREE.BackSide;
-
-
+  const element = document.querySelector(".space");
 
   new TWEEN.Tween(camera.position)
     .to(targetPosition, duration * acceleration)
     .easing(TWEEN.Easing.Quadratic.InOut)
     .onUpdate(() => camera.lookAt(earth.position))
     .onComplete(() => {
-        scene.background.set(atmosphereColor);
-        // scene.add(sky);
-        scene.remove(sun, earthGroup, moon, stars, galaxy, lines);
-        element.remove();
-        scene.add(onEarthSun);
-        for (let i = 0; i < cloudModels.length; i++) {
-          scene.add(cloudModels[i]);
-        }
-        document.querySelector('.earth').classList.add('show_text');
+      scene.background.set(atmosphereColor);
+      scene.add(backgroundMesh);
+      scene.add(balloonModel, airplaneModel, birdModel);
+      scene.remove(sun, earthGroup, moon, stars, galaxy, lines);
+      camera.position.set(0,0, 20)
+      element.remove();
+      scene.add(onEarthSun);
+      for (let i = 0; i < cloudModels.length; i++) {
+        scene.add(cloudModels[i]);
+      }
+      // document.querySelector(".earth").classList.add("show_text");
     })
     .start();
 
@@ -310,13 +326,9 @@ function animateCameraToEarth() {
   updateTweens();
 }
 
-// white effect of like clouds moving out of the way 
-// 2d landing on earth
-// then 3d tree with projects
-// garden end with skills as flowers
-// contact form as a bird flying away
-// 3d model of me
-
+window.addEventListener("scroll", () => {
+  backgroundMesh.position.y = -window.scrollY * 0.1;
+});
 window.addEventListener("scroll", onFirstScroll);
 
 camera.updateProjectionMatrix();
@@ -328,7 +340,6 @@ function animate() {
   const delta = clock.getDelta();
   moonOrbitEarth();
   TWEEN.update();
-
 
   if (earth) {
     earth.rotation.y += 0.2 * delta;
@@ -343,46 +354,69 @@ function animate() {
 
   if (sun) {
     sun.rotation.z += 0.05 * delta;
-  } 
+  }
 
   if (stars) {
-    stars.rotation.y -= 0.0002
+    stars.rotation.y -= 0.0002;
   }
 
   if (cloudModels.length > 0) {
-
     for (let i = 0; i < cloudModels.length; i++) {
-      if (cloudModels[i].position.x > 80) {
+      if (cloudModels[i].position.x > 100) {
         cloudModels[i].position.x = -130;
-      }
-      else {
+      } else {
         cloudModels[i].position.x += 5 * delta;
       }
     }
   }
 
-  if (lines){
+  if (backgroundMesh) {
+    backgroundMesh.position.x = camera.position.x;
+    backgroundMesh.position.y = camera.position.y;
+  }
 
-    for (let line_index= 0; line_index < LINE_COUNT; line_index++) {
-      va[2*line_index] += 0.02; //bump up the velocity by the acceleration amount
-      va[2*line_index+1] += 0.025;
-  
-      pa[6*line_index+2] += va[2*line_index];    
-      pa[6*line_index+5] += va[2*line_index+1];  
-  
-      if(pa[6*line_index+5] > 200) {
-          var z= Math.random() * 200 - 100;
-          pa[6*line_index+2] = z;
-          pa[6*line_index+5] = z;
-          va[2*line_index] = 0;
-          va[2*line_index+1] = 0;
+  if (balloonModel) {
+    balloonModel.position.y = Math.sin(clock.getElapsedTime()) * 0.5;
+  }
+
+  if (airplaneModel) {
+    airplaneModel.position.y = Math.sin(clock.getElapsedTime()) * 0.5;
+  }
+
+  if (birdModel) {
+    birdModel.position.x += 0.1 * delta;
+  }
+
+  if (lines) {
+    for (let line_index = 0; line_index < LINE_COUNT; line_index++) {
+      va[2 * line_index] += 0.02; //bump up the velocity by the acceleration amount
+      va[2 * line_index + 1] += 0.025;
+
+      pa[6 * line_index + 2] += va[2 * line_index];
+      pa[6 * line_index + 5] += va[2 * line_index + 1];
+
+      if (pa[6 * line_index + 5] > 200) {
+        var z = Math.random() * 200 - 100;
+        pa[6 * line_index + 2] = z;
+        pa[6 * line_index + 5] = z;
+        va[2 * line_index] = 0;
+        va[2 * line_index + 1] = 0;
       }
     }
   }
   pos.needsUpdate = true;
   renderer.render(scene, camera);
   requestAnimationFrame(animate);
+}
 
+window.addEventListener("resize", onWindowResize, false);
+
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+
+  backgroundMesh.scale.x = camera.aspect; // Scale the background mesh to match the new aspect ratio
+  renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
 document.getElementById("app").appendChild(renderer.domElement);
