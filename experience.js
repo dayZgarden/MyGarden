@@ -216,10 +216,10 @@ const loader = new GLTFLoader();
 loader.load("cloud_1.glb", (gltf) => {
   const originalCloud = gltf.scene;
 
-  for (let i = 0; i < 15; i++) {
+  for (let i = 0; i < 35; i++) {
     const cloudClone = originalCloud.clone();
 
-    cloudClone.scale.set(0.5, 0.5, 0.5);
+    cloudClone.scale.set(0.65, 0.65, 0.65);
     cloudClone.position.set(
       Math.random() * 200 - 100,
       Math.random() * 12 + 6,
@@ -252,7 +252,7 @@ backgroundMaterial.needsUpdate = true;
 backgroundMesh.position.set(0, 0, -100);
 
 // sphere sun on earth
-const onEarthSunGeometry = new THREE.SphereGeometry(7, 50, 50);
+const onEarthSunGeometry = new THREE.SphereGeometry(7, 350, 50);
 const onEarthSunMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
 const onEarthSun = new THREE.Mesh(onEarthSunGeometry, onEarthSunMaterial);
 onEarthSun.scale.set(2, 2, 2);
@@ -263,8 +263,8 @@ let balloonModel;
 const balloon = new GLTFLoader();
 balloon.load("hot_air_balloon.glb", (gltf) => {
   balloonModel = gltf.scene;
-  balloonModel.scale.set(0.2, 0.2, 0.2);
-  balloonModel.position.set(-15,-2, -10);
+  balloonModel.scale.set(0.3, 0.3, 0.3);
+  balloonModel.position.set(50, -20, -25);
 });
 
 let airplaneModel;
@@ -272,20 +272,22 @@ let airplaneModel;
 const airplane = new GLTFLoader();
 airplane.load("airplane.glb", (gltf) => {
   airplaneModel = gltf.scene;
-  airplaneModel.scale.set(0.05, 0.05, 0.05);
-  airplaneModel.position.set(15,-2, -10);
-  airplaneModel.rotation.y = -Math.PI;
+  airplaneModel.scale.set(0.1, 0.1, 0.1);
+  airplaneModel.position.set(-110,-10, -10);
+  airplaneModel.rotation.y = Math.PI / 2;
 });
 
-let birdModel;
+const contrailGeometry = new THREE.BufferGeometry();
 
-const bird = new GLTFLoader();
-bird.load("bird.glb", (gltf) => {
-  birdModel = gltf.scene;
-  birdModel.scale.set(5, 5, 5);
-  birdModel.position.set(0,-2, -10);
-  birdModel.rotation.y = -Math.PI / 2;
-});
+const positions = new Float32Array(6);
+contrailGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+const contrailMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
+
+contrailMaterial.transparent = true;
+contrailMaterial.opacity = 0.35;
+
+const contrailLine = new THREE.Line(contrailGeometry, contrailMaterial);
 
 function animateCameraToEarth() {
   const targetPosition = { z: 5 - 0.75 };
@@ -306,16 +308,15 @@ function animateCameraToEarth() {
     .onUpdate(() => camera.lookAt(earth.position))
     .onComplete(() => {
       scene.background.set(atmosphereColor);
-      scene.add(backgroundMesh);
-      scene.add(balloonModel, airplaneModel, birdModel);
+      scene.add(backgroundMesh, onEarthSun, airplaneModel, contrailLine);
       scene.remove(sun, earthGroup, moon, stars, galaxy, lines);
       camera.position.set(0,0, 20)
+
       element.remove();
-      scene.add(onEarthSun);
       for (let i = 0; i < cloudModels.length; i++) {
         scene.add(cloudModels[i]);
       }
-      // document.querySelector(".earth").classList.add("show_text");
+      document.querySelector(".earth").classList.add("show_text");
     })
     .start();
 
@@ -326,14 +327,14 @@ function animateCameraToEarth() {
   updateTweens();
 }
 
-window.addEventListener("scroll", () => {
-  backgroundMesh.position.y = -window.scrollY * 0.1;
-});
 window.addEventListener("scroll", onFirstScroll);
 
 camera.updateProjectionMatrix();
 
 const clock = new THREE.Clock();
+
+let startPoint = new THREE.Vector3(-50, -5, 0); // Starting point of the contrail
+let endPoint = new THREE.Vector3(); // End point of the contrail
 
 function animate() {
   controls.update();
@@ -347,6 +348,29 @@ function animate() {
     cloudMesh.rotation.y += 0.23 * delta;
     glowMesh.rotation.y += 0.2 * delta;
   }
+
+  if (airplaneModel){
+      airplaneModel.position.x += 0.1;
+      if (airplaneModel.position.x > 50) { 
+        setTimeout(() => {
+          scene.remove(contrailLine);
+          scene.remove(airplaneModel);
+        }, 1500)
+      }
+
+      endPoint.copy(airplaneModel.position);
+
+      const positions = contrailLine.geometry.attributes.position.array;
+      positions[0] = startPoint.x;
+      positions[1] = startPoint.y;
+      positions[2] = startPoint.z;
+
+      positions[3] = endPoint.x;
+      positions[4] = endPoint.y;
+      positions[5] = endPoint.z;
+
+      contrailLine.geometry.attributes.position.needsUpdate = true
+    } 
 
   if (moon) {
     moon.rotation.y += 0.8 * delta;
@@ -365,27 +389,15 @@ function animate() {
       if (cloudModels[i].position.x > 100) {
         cloudModels[i].position.x = -130;
       } else {
-        cloudModels[i].position.x += 5 * delta;
+        cloudModels[i].position.x += 2 * delta;
       }
     }
   }
 
-  if (backgroundMesh) {
-    backgroundMesh.position.x = camera.position.x;
-    backgroundMesh.position.y = camera.position.y;
-  }
-
   if (balloonModel) {
-    balloonModel.position.y = Math.sin(clock.getElapsedTime()) * 0.5;
+    balloonModel.position.y = Math.sin(clock.getElapsedTime()) * 0.5 - 9;
   }
 
-  if (airplaneModel) {
-    airplaneModel.position.y = Math.sin(clock.getElapsedTime()) * 0.5;
-  }
-
-  if (birdModel) {
-    birdModel.position.x += 0.1 * delta;
-  }
 
   if (lines) {
     for (let line_index = 0; line_index < LINE_COUNT; line_index++) {
