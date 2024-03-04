@@ -4,14 +4,45 @@ import * as TWEEN from "@tweenjs/tween.js";
 import getStarfield from "./getStarfield";
 import getFresnelMat from "./getFresnelMat";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import * as dat from "dat.gui";
 
+// Constants
 const TILT = -23.5 * (Math.PI / 180);
-const spaceColor = new THREE.Color(0x000000);
-const atmosphereColor = new THREE.Color(0x448ee4);
+const SPACE = new THREE.Color(0x000000);
+const SKY = new THREE.Color(0x448ee4);
+const ORBITAL_RADIUS = 15;
+const ORBITAL_SPEED = 0.5;
+const LINE_COUNT = 3000;
+const TARGET_POSITION = { z: 5 - 0.75 };
+const DURATION = 2100;
+const ACCELERATION = 1.5;
 
+// Global variables
+let earth, moon, sun, stars, galaxy, lines, onEarthSun, cloudModels = [], character, balloonModel, airplaneModel, lightsMesh, cloudsMesh, glowMesh, ground,
+  geom = new THREE.BufferGeometry(),
+  earthGroup = new THREE.Group(),
+  clock = new THREE.Clock(),
+  hasScrolled = false;
+
+// Arrays
+geom.setAttribute(
+  "position",
+  new THREE.BufferAttribute(new Float32Array(6 * LINE_COUNT), 3)
+);
+geom.setAttribute(
+  "velocity",
+  new THREE.BufferAttribute(new Float32Array(2 * LINE_COUNT), 1)
+);
+
+let pos = geom.getAttribute("position");
+let pa = pos.array;
+let vel = geom.getAttribute("velocity");
+let va = vel.array;
+
+// Scene
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(spaceColor);
+scene.background = new THREE.Color(SPACE);
+
+// Camera
 const camera = new THREE.PerspectiveCamera(
   75,
   window.innerWidth / window.innerHeight,
@@ -19,32 +50,50 @@ const camera = new THREE.PerspectiveCamera(
   1000
 );
 camera.position.set(0, 0, 20);
+
+// Renderer
 const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
+// Controls
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableZoom = true;
 controls.enablePan = true;
 controls.enableRotate = true;
 
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
-
+// Ambient Light For Space
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
 scene.add(ambientLight);
 
+// Directional Light for Space
 const sunLight = new THREE.DirectionalLight(0xffffff, 2);
 sunLight.position.set(-2, 0.5, 5);
 scene.add(sunLight);
 
-let earth;
-const earthGroup = new THREE.Group();
+// Load textures
+const loadTexture = (url) => {
+  return new Promise((resolve, reject) => {
+    const textureLoader = new THREE.TextureLoader();
+    textureLoader.load(url, resolve, undefined, reject);
+  });
+}
 
-const earthGeometry = new THREE.SphereGeometry(1.6, 50, 50);
-const textureLoader = new THREE.TextureLoader();
-textureLoader.load("earth.jpg", (texture) => {
-  const bumpMap = textureLoader.load("earthBump.jpg");
-  const normalMap = textureLoader.load("normal.jpg");
+// Load models
+const loadModel = (url) => {
+  return new Promise((resolve, reject) => {
+    const loader = new GLTFLoader();
+    loader.load(url, resolve, undefined, reject);
+  });
+}
+
+// Create Earth
+const createEarth = async () => {
+  const earthGeometry = new THREE.SphereGeometry(1.6, 50, 50);
+
+  const texture = await loadTexture("earth.jpg");
+  const bumpMap = await loadTexture("earthBump.jpg");
+  const normalMap = await loadTexture("normal.jpg");
 
   const earthMaterial = new THREE.MeshStandardMaterial({
     map: texture,
@@ -57,42 +106,42 @@ textureLoader.load("earth.jpg", (texture) => {
 
   earth = new THREE.Mesh(earthGeometry, earthMaterial);
   earthGroup.add(earth);
-});
+  earthGroup.rotation.z = TILT;
+  earthGroup.scale.set(2.5, 2.5, 2.5);
 
-scene.add(earthGroup);
-earthGroup.rotation.z = TILT;
-earthGroup.scale.set(2.5, 2.5, 2.5);
+  const lightMaterial = new THREE.MeshStandardMaterial({
+    map: textureLoader.load("lights.jpg"),
+    blending: THREE.AdditiveBlending,
+  });
+  lightsMesh = new THREE.Mesh(earthGeometry, lightMaterial);
 
-const lightMaterial = new THREE.MeshStandardMaterial({
-  map: textureLoader.load("lights.jpg"),
-  blending: THREE.AdditiveBlending,
-});
-const lightMesh = new THREE.Mesh(earthGeometry, lightMaterial);
+  const cloudMaterial = new THREE.MeshStandardMaterial({
+    map: textureLoader.load("cloudmap.jpg"),
+    blending: THREE.NormalBlending,
+    transparent: true,
+    opacity: 0.25,
+    alphaMap: textureLoader.load("alphamap.jpg"),
+  });
 
-const cloudMaterial = new THREE.MeshStandardMaterial({
-  map: textureLoader.load("cloudmap.jpg"),
-  blending: THREE.NormalBlending,
-  transparent: true,
-  opacity: 0.25,
-  alphaMap: textureLoader.load("alphamap.jpg"),
-});
+  cloudsMesh = new THREE.Mesh(earthGeometry, cloudMaterial);
+  cloudsMesh.scale.set(1.01, 1.01, 1.01);
 
-const cloudMesh = new THREE.Mesh(earthGeometry, cloudMaterial);
-cloudMesh.scale.set(1.01, 1.01, 1.01);
+  const glowMaterial = getFresnelMat();
+  glowMesh = new THREE.Mesh(earthGeometry, glowMaterial);
+  glowMesh.scale.setScalar(1.02);
 
-const fresnelMat = getFresnelMat();
-const glowMesh = new THREE.Mesh(earthGeometry, fresnelMat);
-glowMesh.scale.setScalar(1.02);
+  earthGroup.add(lightsMesh, cloudsMesh, glowMesh);
 
-earthGroup.add(lightMesh, cloudMesh, glowMesh);
+  return earthGroup;
+};
 
-let moon;
+// Create Moon
+const createMoon = async () => {
+  const moonGeometry = new THREE.SphereGeometry(0.5, 50, 50);
 
-const moonGeometry = new THREE.SphereGeometry(0.5, 50, 50);
-const textureMoonLoader = new THREE.TextureLoader();
-textureMoonLoader.load("moon.jpg", (texture) => {
-  const bumpMap = textureMoonLoader.load("moonBump.jpg");
-  const normalMap = textureMoonLoader.load("moonNormal.jpg");
+  const texture = await loadTexture("moon.jpg");
+  const bumpMap = await loadTexture("moonBump.jpg");
+  const normalMap = await loadTexture("moonNormal.jpg");
 
   const moonMaterial = new THREE.MeshStandardMaterial({
     map: texture,
@@ -106,15 +155,16 @@ textureMoonLoader.load("moon.jpg", (texture) => {
   moon = new THREE.Mesh(moonGeometry, moonMaterial);
   moon.position.set(10, 0, 0);
   moon.scale.set(1.5, 1.5, 1.5);
-  scene.add(moon);
-});
 
-let sun;
+  return moon;
+};
 
-const sunGeometry = new THREE.SphereGeometry(35, 50, 50);
-const sunTextureLoader = new THREE.TextureLoader();
-sunTextureLoader.load("sun.jpg", (texture) => {
-  const bumpMap = textureMoonLoader.load("bumpy.jpg");
+// Create Sun
+const createSun = async () => {
+  const sunGeometry = new THREE.SphereGeometry(35, 50, 50);
+
+  const texture = await loadTexture("sun.jpg");
+  const bumpMap = await loadTexture("bumpy.jpg");
 
   const sunMaterial = new THREE.MeshStandardMaterial({
     map: texture,
@@ -126,81 +176,141 @@ sunTextureLoader.load("sun.jpg", (texture) => {
 
   sun = new THREE.Mesh(sunGeometry, sunMaterial);
   sun.position.set(95, 50, -80);
-  scene.add(sun);
-});
-const orbitalRadius = 15;
-const orbitalSpeed = 0.5;
 
-function moonOrbitEarth() {
+  return sun;
+};
+
+// Create Stars
+stars = getStarfield({ numStars: 1000 });
+scene.add(stars);
+
+// Create Galaxy
+const createGalaxy = () => {
+  const galaxyGeometry = new THREE.SphereGeometry(65, 50, 50);
+  const galaxyMaterial = new THREE.MeshStandardMaterial({
+    color: 0x000000,
+    side: THREE.BackSide,
+  });
+
+  galaxy = new THREE.Mesh(galaxyGeometry, galaxyMaterial);
+  galaxy.position.set(90, 50, -50);
+
+  return galaxy;
+};
+
+// Create Lines
+function createLines() {
+
+  for (let line_index = 0; line_index < LINE_COUNT; line_index++) {
+    let x = Math.random() * 400 - 200;
+    let y = Math.random() * 200 - 100;
+    let z = Math.random() * 500 - 100;
+    let xx = x;
+    let yy = y;
+    let zz = z;
+
+    pa[6 * line_index] = x;
+    pa[6 * line_index + 1] = y;
+    pa[6 * line_index + 2] = z;
+
+    pa[6 * line_index + 3] = xx;
+    pa[6 * line_index + 4] = yy;
+    pa[6 * line_index + 5] = zz;
+
+    va[2 * line_index] = va[2 * line_index + 1] = 0;
+  }
+
+  let mat = new THREE.LineBasicMaterial({ color: 0xffffff });
+  lines = new THREE.LineSegments(geom, mat);
+
+  return lines;
+}
+
+// Create Ground
+const createGround = () => {
+  const groundGeometry = new THREE.PlaneGeometry(500, 500);
+  const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
+  ground = new THREE.Mesh(groundGeometry, groundMaterial);
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.y = -7;
+
+  return ground;
+};
+
+// Create On Earth Sun
+const createOnEarthSun = () => {
+  const onEarthSunGeometry = new THREE.SphereGeometry(7, 350, 50);
+  const onEarthSunMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+  onEarthSun = new THREE.Mesh(onEarthSunGeometry, onEarthSunMaterial);
+  onEarthSun.scale.set(2, 2, 2);
+  onEarthSun.position.set(80, 35, -50);
+  
+  return onEarthSun;
+}
+
+// Function to animate the moon orbiting the earth
+const moonOrbitEarth = () => {
   const elapsedTime = clock.getElapsedTime();
 
   if (moon && earth) {
     moon.position.x =
-      earth.position.x + Math.cos(elapsedTime * orbitalSpeed) * orbitalRadius;
+      earth.position.x + Math.cos(elapsedTime * ORBITAL_SPEED) * ORBITAL_RADIUS;
     moon.position.z =
-      earth.position.z + Math.sin(elapsedTime * orbitalSpeed) * orbitalRadius;
+      earth.position.z + Math.sin(elapsedTime * ORBITAL_SPEED) * ORBITAL_RADIUS;
   }
 }
 
-let stars = getStarfield({ numStars: 1000 });
-scene.add(stars);
+// Load models
+const loadModels = async () => {
+  const cloudModel = await loadModel("cloud_1.glb");
+  const balloonModel = await loadModel("hot_air_balloon.glb");
+  const airplaneModel = await loadModel("airplane.glb");
+  const characterModel = await loadModel("character_with_clothes.glb");
+  characterModel.scene.scale.set(0.1, 0.1, 0.1);
+  characterModel.scene.position.set(0, 0, 0);
 
-let LINE_COUNT = 3000;
-let geom = new THREE.BufferGeometry();
-geom.setAttribute(
-  "position",
-  new THREE.BufferAttribute(new Float32Array(6 * LINE_COUNT), 3)
-);
-geom.setAttribute(
-  "velocity",
-  new THREE.BufferAttribute(new Float32Array(2 * LINE_COUNT), 1)
-);
-let pos = geom.getAttribute("position");
-let pa = pos.array;
-let vel = geom.getAttribute("velocity");
-let va = vel.array;
+  return {
+    cloudModel,
+    balloonModel,
+    airplaneModel,
+    characterModel,
+  };
+};
 
-for (let line_index = 0; line_index < LINE_COUNT; line_index++) {
-  var x = Math.random() * 400 - 200;
-  var y = Math.random() * 200 - 100;
-  var z = Math.random() * 500 - 100;
-  var xx = x;
-  var yy = y;
-  var zz = z;
+// Load textures
+const textureLoader = new THREE.TextureLoader();
 
-  pa[6 * line_index] = x;
-  pa[6 * line_index + 1] = y;
-  pa[6 * line_index + 2] = z;
+// Add objects to the scene
+const addObjectsToScene = (objects) => {
+  const { cloudModel, balloonModel, airplaneModel, characterModel } = objects;
 
-  pa[6 * line_index + 3] = xx;
-  pa[6 * line_index + 4] = yy;
-  pa[6 * line_index + 5] = zz;
+  // scene.add(cloudModel.scene);
 
-  va[2 * line_index] = va[2 * line_index + 1] = 0;
-}
-let mat = new THREE.LineBasicMaterial({ color: 0xffffff });
-let lines = new THREE.LineSegments(geom, mat);
+  // for (let i = 0; i < 35; i++) {
+  //   const cloudClone = cloudModel.scene.clone();
+  //   cloudClone.scale.set(0.65, 0.65, 0.65);
+  //   cloudClone.position.set(
+  //     Math.random() * 200 - 100,
+  //     Math.random() * 12 + 6,
+  //     Math.random() * -10 - 10
+  //   );
+  //   scene.add(cloudClone);
+  // }
 
-let galaxy;
+  // scene.add(balloonModel.scene);
+  // scene.add(airplaneModel.scene);
 
-const galaxyGeometry = new THREE.SphereGeometry(65, 50, 50);
-const galaxyMaterial = new THREE.MeshStandardMaterial({
-  color: 0x000000,
-  side: THREE.BackSide,
-});
-galaxy = new THREE.Mesh(galaxyGeometry, galaxyMaterial);
-galaxy.position.set(90, 50, -50);
-scene.add(galaxy);
+  scene.add(characterModel.scene);
+};
 
-window.addEventListener("resize", () => {
+// Resize handler
+const onWindowResize = () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
-});
+};
 
-let hasScrolled = false;
-
-function onFirstScroll() {
+const onFirstScroll = () => {
   if (!hasScrolled) {
     hasScrolled = true;
     document.querySelector(".show").classList.remove("show");
@@ -209,92 +319,14 @@ function onFirstScroll() {
   }
 }
 
-// const gui = new dat.GUI();
+const models = await loadModels();
 
-let cloudModels = [];
-const loader = new GLTFLoader();
-loader.load("cloud_1.glb", (gltf) => {
-  const originalCloud = gltf.scene;
+const animateCameraToEarth = () => {
 
-  for (let i = 0; i < 35; i++) {
-    const cloudClone = originalCloud.clone();
-
-    cloudClone.scale.set(0.65, 0.65, 0.65);
-    cloudClone.position.set(
-      Math.random() * 200 - 100,
-      Math.random() * 12 + 6,
-      Math.random() * -10 - 10
-    );
-
-    cloudModels.push(cloudClone);
-  }
-});
-
-const backgroundTexture = textureLoader.load("skybackground.jpg");
-backgroundTexture.wrapS = THREE.ClampToEdgeWrapping;
-backgroundTexture.wrapT = THREE.ClampToEdgeWrapping;
-backgroundTexture.minFilter = THREE.LinearFilter;
-
-let height = 100;
-
-const aspectRatio = window.innerWidth / window.innerHeight;
-const backgroundGeometry = new THREE.PlaneGeometry(
-  200 * aspectRatio,
-  height * aspectRatio
-);
-const backgroundMaterial = new THREE.MeshBasicMaterial({
-  map: backgroundTexture,
-});
-const backgroundMesh = new THREE.Mesh(backgroundGeometry, backgroundMaterial);
-backgroundMaterial.map = backgroundTexture;
-backgroundMaterial.map.minFilter = THREE.LinearFilter;
-backgroundMaterial.needsUpdate = true;
-backgroundMesh.position.set(0, 0, -100);
-
-// sphere sun on earth
-const onEarthSunGeometry = new THREE.SphereGeometry(7, 350, 50);
-const onEarthSunMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-const onEarthSun = new THREE.Mesh(onEarthSunGeometry, onEarthSunMaterial);
-onEarthSun.scale.set(2, 2, 2);
-onEarthSun.position.set(80, 35, -50);
-
-let balloonModel;
-
-const balloon = new GLTFLoader();
-balloon.load("hot_air_balloon.glb", (gltf) => {
-  balloonModel = gltf.scene;
-  balloonModel.scale.set(0.3, 0.3, 0.3);
-  balloonModel.position.set(50, -20, -25);
-});
-
-let airplaneModel;
-
-const airplane = new GLTFLoader();
-airplane.load("airplane.glb", (gltf) => {
-  airplaneModel = gltf.scene;
-  airplaneModel.scale.set(0.1, 0.1, 0.1);
-  airplaneModel.position.set(-110,-10, -10);
-  airplaneModel.rotation.y = Math.PI / 2;
-});
-
-const contrailGeometry = new THREE.BufferGeometry();
-
-const positions = new Float32Array(6);
-contrailGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-
-const contrailMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
-
-contrailMaterial.transparent = true;
-contrailMaterial.opacity = 0.35;
-
-const contrailLine = new THREE.Line(contrailGeometry, contrailMaterial);
-
-function animateCameraToEarth() {
-  const targetPosition = { z: 5 - 0.75 };
-  const duration = 2100;
-  const acceleration = 1.5;
-
+  lines = createLines();
   scene.add(lines);
+  ground = createGround();
+  onEarthSun = createOnEarthSun();
 
   setTimeout(() => {
     console.log("hi");
@@ -303,20 +335,20 @@ function animateCameraToEarth() {
   const element = document.querySelector(".space");
 
   new TWEEN.Tween(camera.position)
-    .to(targetPosition, duration * acceleration)
+    .to(TARGET_POSITION, DURATION * ACCELERATION)
     .easing(TWEEN.Easing.Quadratic.InOut)
     .onUpdate(() => camera.lookAt(earth.position))
     .onComplete(() => {
-      scene.background.set(atmosphereColor);
-      scene.add(backgroundMesh, onEarthSun, airplaneModel, contrailLine);
+      scene.background.set(SKY);
+      scene.add(character, ground, onEarthSun);
+
       scene.remove(sun, earthGroup, moon, stars, galaxy, lines);
       camera.position.set(0,0, 20)
 
+      addObjectsToScene(models);
+
       element.remove();
-      for (let i = 0; i < cloudModels.length; i++) {
-        scene.add(cloudModels[i]);
-      }
-      document.querySelector(".earth").classList.add("show_text");
+      // document.querySelector(".earth").classList.add("show_text");
     })
     .start();
 
@@ -329,14 +361,9 @@ function animateCameraToEarth() {
 
 window.addEventListener("scroll", onFirstScroll);
 
-camera.updateProjectionMatrix();
-
-const clock = new THREE.Clock();
-
-let startPoint = new THREE.Vector3(-50, -5, 0); // Starting point of the contrail
-let endPoint = new THREE.Vector3(); // End point of the contrail
-
-function animate() {
+// Animate the scene
+const animate = () => {
+  requestAnimationFrame(animate);
   controls.update();
   const delta = clock.getDelta();
   moonOrbitEarth();
@@ -344,33 +371,10 @@ function animate() {
 
   if (earth) {
     earth.rotation.y += 0.2 * delta;
-    lightMesh.rotation.y += 0.2 * delta;
-    cloudMesh.rotation.y += 0.23 * delta;
+    lightsMesh.rotation.y += 0.2 * delta;
+    cloudsMesh.rotation.y += 0.23 * delta;
     glowMesh.rotation.y += 0.2 * delta;
   }
-
-  if (airplaneModel){
-      airplaneModel.position.x += 0.1;
-      if (airplaneModel.position.x > 50) { 
-        setTimeout(() => {
-          scene.remove(contrailLine);
-          scene.remove(airplaneModel);
-        }, 1500)
-      }
-
-      endPoint.copy(airplaneModel.position);
-
-      const positions = contrailLine.geometry.attributes.position.array;
-      positions[0] = startPoint.x;
-      positions[1] = startPoint.y;
-      positions[2] = startPoint.z;
-
-      positions[3] = endPoint.x;
-      positions[4] = endPoint.y;
-      positions[5] = endPoint.z;
-
-      contrailLine.geometry.attributes.position.needsUpdate = true
-    } 
 
   if (moon) {
     moon.rotation.y += 0.8 * delta;
@@ -384,6 +388,10 @@ function animate() {
     stars.rotation.y -= 0.0002;
   }
 
+  if (character && character.position.y > 0) {
+    character.position.y -= 1;
+  }
+
   if (cloudModels.length > 0) {
     for (let i = 0; i < cloudModels.length; i++) {
       if (cloudModels[i].position.x > 100) {
@@ -394,14 +402,9 @@ function animate() {
     }
   }
 
-  if (balloonModel) {
-    balloonModel.position.y = Math.sin(clock.getElapsedTime()) * 0.5 - 9;
-  }
-
-
   if (lines) {
     for (let line_index = 0; line_index < LINE_COUNT; line_index++) {
-      va[2 * line_index] += 0.02; //bump up the velocity by the acceleration amount
+      va[2 * line_index] += 0.02;
       va[2 * line_index + 1] += 0.025;
 
       pa[6 * line_index + 2] += va[2 * line_index];
@@ -418,18 +421,57 @@ function animate() {
   }
   pos.needsUpdate = true;
   renderer.render(scene, camera);
-  requestAnimationFrame(animate);
-}
+};
 
-window.addEventListener("resize", onWindowResize, false);
+// Initialize the scene
+const init = async () => {
+  const earthGroup = await createEarth();
+  const moon = await createMoon();
+  const sun = await createSun();
+  const galaxy = createGalaxy();
 
-function onWindowResize() {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
+  scene.add(earthGroup);
+  scene.add(moon);
+  scene.add(sun);
+  scene.add(stars);
+  scene.add(galaxy);
 
-  backgroundMesh.scale.x = camera.aspect; // Scale the background mesh to match the new aspect ratio
-  renderer.setSize(window.innerWidth, window.innerHeight);
-}
+  window.addEventListener("resize", onWindowResize);
+  animate();
+};
 
-document.getElementById("app").appendChild(renderer.domElement);
-animate();
+init();
+
+// TODO: Add loading screen after init() is called
+
+// TODO: Add physics to the second scene
+
+// TODO: Add character movement
+
+// TODO: Add character interaction with objects
+
+// TODO: Create scene in blender
+
+// const backgroundTexture = textureLoader.load("backgroundtest.jpg");
+// const addBackground = () => {
+//   backgroundTexture.wrapS = THREE.ClampToEdgeWrapping;
+//   backgroundTexture.wrapT = THREE.ClampToEdgeWrapping;
+//   backgroundTexture.minFilter = THREE.LinearFilter;
+
+//   let height = 100;
+
+//   const aspectRatio = window.innerWidth / window.innerHeight;
+//   const backgroundGeometry = new THREE.PlaneGeometry(
+//     200 * aspectRatio,
+//     height * aspectRatio
+//   );
+//   const backgroundMaterial = new THREE.MeshBasicMaterial({
+//     map: backgroundTexture,
+//   });
+//   const backgroundMesh = new THREE.Mesh(backgroundGeometry, backgroundMaterial);
+//   backgroundMaterial.map = backgroundTexture;
+//   backgroundMaterial.map.minFilter = THREE.LinearFilter;
+//   backgroundMaterial.needsUpdate = true;
+//   backgroundMesh.position.set(0, 0, -100);
+// };
+
