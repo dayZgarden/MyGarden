@@ -1,0 +1,15 @@
+{
+  "name": "three",
+  "version": "1.0.0",
+  "description": "",
+  "main": "experience.js",
+  "scripts": {
+    "build": "vite build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "vite": "^5.1.5"
+  }
+}
