@@ -4,6 +4,7 @@ import * as TWEEN from "@tweenjs/tween.js";
 import getStarfield from "./getStarfield";
 import getFresnelMat from "./getFresnelMat";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import * as CANNON from 'cannon';
 
 // Constants
 const TILT = -23.5 * (Math.PI / 180);
@@ -15,6 +16,8 @@ const LINE_COUNT = 3000;
 const TARGET_POSITION = { z: 5 - 0.75 };
 const DURATION = 2100;
 const ACCELERATION = 1.5;
+const WORLD = new CANNON.World();
+const textureLoader = new THREE.TextureLoader();
 
 // Global variables
 let earth, moon, sun, stars, galaxy, lines, onEarthSun, cloudModels = [], character, balloonModel, airplaneModel, lightsMesh, cloudsMesh, glowMesh, ground,
@@ -71,7 +74,7 @@ const sunLight = new THREE.DirectionalLight(0xffffff, 2);
 sunLight.position.set(-2, 0.5, 5);
 scene.add(sunLight);
 
-// Load textures
+// Load texture helper function
 const loadTexture = (url) => {
   return new Promise((resolve, reject) => {
     const textureLoader = new THREE.TextureLoader();
@@ -79,7 +82,7 @@ const loadTexture = (url) => {
   });
 }
 
-// Load models
+// Load model helper function
 const loadModel = (url) => {
   return new Promise((resolve, reject) => {
     const loader = new GLTFLoader();
@@ -91,9 +94,9 @@ const loadModel = (url) => {
 const createEarth = async () => {
   const earthGeometry = new THREE.SphereGeometry(1.6, 50, 50);
 
-  const texture = await loadTexture("earth.jpg");
-  const bumpMap = await loadTexture("earthBump.jpg");
-  const normalMap = await loadTexture("normal.jpg");
+  const texture = await loadTexture("/earth.jpg");
+  const bumpMap = await loadTexture("/earthBump.jpg");
+  const normalMap = await loadTexture("/normal.jpg");
 
   const earthMaterial = new THREE.MeshStandardMaterial({
     map: texture,
@@ -110,17 +113,17 @@ const createEarth = async () => {
   earthGroup.scale.set(2.5, 2.5, 2.5);
 
   const lightMaterial = new THREE.MeshStandardMaterial({
-    map: textureLoader.load("lights.jpg"),
+    map: textureLoader.load("/lights.jpg"),
     blending: THREE.AdditiveBlending,
   });
   lightsMesh = new THREE.Mesh(earthGeometry, lightMaterial);
 
   const cloudMaterial = new THREE.MeshStandardMaterial({
-    map: textureLoader.load("cloudmap.jpg"),
+    map: textureLoader.load("/cloudmap.jpg"),
     blending: THREE.NormalBlending,
     transparent: true,
     opacity: 0.25,
-    alphaMap: textureLoader.load("alphamap.jpg"),
+    alphaMap: textureLoader.load("/alphamap.jpg"),
   });
 
   cloudsMesh = new THREE.Mesh(earthGeometry, cloudMaterial);
@@ -139,9 +142,9 @@ const createEarth = async () => {
 const createMoon = async () => {
   const moonGeometry = new THREE.SphereGeometry(0.5, 50, 50);
 
-  const texture = await loadTexture("moon.jpg");
-  const bumpMap = await loadTexture("moonBump.jpg");
-  const normalMap = await loadTexture("moonNormal.jpg");
+  const texture = await loadTexture("/moon.jpg");
+  const bumpMap = await loadTexture("/moonBump.jpg");
+  const normalMap = await loadTexture("/moonNormal.jpg");
 
   const moonMaterial = new THREE.MeshStandardMaterial({
     map: texture,
@@ -163,8 +166,8 @@ const createMoon = async () => {
 const createSun = async () => {
   const sunGeometry = new THREE.SphereGeometry(35, 50, 50);
 
-  const texture = await loadTexture("sun.jpg");
-  const bumpMap = await loadTexture("bumpy.jpg");
+  const texture = await loadTexture("/sun.jpg");
+  const bumpMap = await loadTexture("/bumpy.jpg");
 
   const sunMaterial = new THREE.MeshStandardMaterial({
     map: texture,
@@ -232,7 +235,7 @@ const createGround = () => {
   const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
   ground = new THREE.Mesh(groundGeometry, groundMaterial);
   ground.rotation.x = -Math.PI / 2;
-  ground.position.y = -7;
+  ground.position.y = -8;
 
   return ground;
 };
@@ -262,10 +265,10 @@ const moonOrbitEarth = () => {
 
 // Load models
 const loadModels = async () => {
-  const cloudModel = await loadModel("cloud_1.glb");
-  const balloonModel = await loadModel("hot_air_balloon.glb");
-  const airplaneModel = await loadModel("airplane.glb");
-  const characterModel = await loadModel("character_with_clothes.glb");
+  const cloudModel = await loadModel("/cloud_1.glb");
+  const balloonModel = await loadModel("/hot_air_balloon.glb");
+  const airplaneModel = await loadModel("/airplane.glb");
+  const characterModel = await loadModel("/character_with_clothes.glb");
   characterModel.scene.scale.set(0.1, 0.1, 0.1);
   characterModel.scene.position.set(0, 0, 0);
 
@@ -277,8 +280,36 @@ const loadModels = async () => {
   };
 };
 
-// Load textures
-const textureLoader = new THREE.TextureLoader();
+// // Add physics
+// WORLD.gravity.set(0, -9.82, 0);
+// WORLD.broadphase = new CANNON.NaiveBroadphase();
+// WORLD.solver.iterations = 10;
+
+// const addPhysics = () => {
+
+//   const groundShape = new CANNON.Plane();
+//   const groundBody = new CANNON.Body({ mass: 0 });
+//   groundBody.addShape(groundShape);
+//   groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+//   WORLD.addBody(groundBody);
+
+// };
+
+// // Create a physics body for the character
+// const createCharacterPhysicsBody = () => {
+//   const shape = new CANNON.Box(new CANNON.Vec3(0.5, 1, 0.5));
+//   const body = new CANNON.Body({ mass: 5 });
+//   body.addShape(shape);
+//   body.position.set(0, 5, 0);
+//   WORLD.addBody(body);
+// };
+
+// // Update physics
+// const updatePhysics = (delta) => {
+//   WORLD.step(1 / 60, delta, 3);
+//   character.position.copy(characterBody.position);
+//   character.quaternion.copy(characterBody.quaternion);
+// };
 
 // Add objects to the scene
 const addObjectsToScene = (objects) => {
@@ -348,7 +379,7 @@ const animateCameraToEarth = () => {
       addObjectsToScene(models);
 
       element.remove();
-      // document.querySelector(".earth").classList.add("show_text");
+      document.querySelector(".sidepanel").classList.add("move__up");
     })
     .start();
 
@@ -388,10 +419,6 @@ const animate = () => {
     stars.rotation.y -= 0.0002;
   }
 
-  if (character && character.position.y > 0) {
-    character.position.y -= 1;
-  }
-
   if (cloudModels.length > 0) {
     for (let i = 0; i < cloudModels.length; i++) {
       if (cloudModels[i].position.x > 100) {
@@ -419,12 +446,16 @@ const animate = () => {
       }
     }
   }
+
+  // updatePhysics(delta);
+
   pos.needsUpdate = true;
   renderer.render(scene, camera);
 };
 
 // Initialize the scene
 const init = async () => {
+  document.querySelector('.loading__screen').style.display = 'flex';
   const earthGroup = await createEarth();
   const moon = await createMoon();
   const sun = await createSun();
@@ -437,20 +468,24 @@ const init = async () => {
   scene.add(galaxy);
 
   window.addEventListener("resize", onWindowResize);
+  document.querySelector('.loading__screen').style.display = 'none';
+  document.querySelector('.space').style.display = 'block';
+  document.querySelector('.sidepanel').style.display = 'block';
+  // createCharacterPhysicsBody();
+  // addPhysics();
   animate();
 };
 
 init();
 
-// TODO: Add loading screen after init() is called
+// TODO: Add physics
 
-// TODO: Add physics to the second scene
+// TODO: Add character movement & make the character fall from the top of the screen/sky after the animation is complete
 
-// TODO: Add character movement
-
-// TODO: Add character interaction with objects
+// TODO: Create character in blender
 
 // TODO: Create scene in blender
+
 
 // const backgroundTexture = textureLoader.load("backgroundtest.jpg");
 // const addBackground = () => {

@@ -45,6 +45,7 @@ a {
   padding: 120px 0;
   color: white;
   height: 101vh;
+  display: none;
 }
 
 .protest-strike-regular {
@@ -151,6 +152,11 @@ h1 {
   top: 50%;
   border-right: 4px solid white;
   border-radius: 9999px 0 0 9999px;
+  display: none;
+}
+
+.move__up {
+  transform: translateY(-50%);
 }
 
 .panel__container{
@@ -173,10 +179,25 @@ h1 {
   display: flex;
   justify-content: center;
   align-items: center;
-  transition: all 0.3s ease-in-out;
+  transition: all .1s ease-in;
 }
 
 .panel__link:hover {
-  color: black;
-  background: white;
+  background: black;
+  color: white;
+  border: 2px solid black;
+}
+
+.loading__screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: black;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+  color: white;
 }
