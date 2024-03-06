@@ -18,15 +18,18 @@ async function main() {
   const TARGET_POSITION = { z: 5 - 0.75 };
   const DURATION = 2100;
   const ACCELERATION = 1.5;
-  const WORLD = new CANNON.World();
+  
+  // Three.js & Cannon.js
+  const world = new CANNON.World();
   const textureLoader = new THREE.TextureLoader();
 
   // Global variables
-  let earth, moon, sun, stars, galaxy, lines, onEarthSun, cloudModels = [], character, balloonModel, airplaneModel, lightsMesh, cloudsMesh, glowMesh, ground,
+  let earth, moon, sun, stars, galaxy, lines, onEarthSun, cloudModels = [], balloonModel, airplaneModel, lightsMesh, cloudsMesh, glowMesh, ground,
     geom = new THREE.BufferGeometry(),
     earthGroup = new THREE.Group(),
     clock = new THREE.Clock(),
-    hasScrolled = false;
+    hasScrolled = false,
+    oldElapsedTime = 0;
 
   // Arrays
   geom.setAttribute(
@@ -57,10 +60,10 @@ async function main() {
   camera.position.set(0, 0, 20);
 
   // Renderer
-  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+  const renderer = new THREE.WebGLRenderer({antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
-
+  
   // Controls
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableZoom = true;
@@ -68,13 +71,28 @@ async function main() {
   controls.enableRotate = true;
 
   // Ambient Light For Space
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+  const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+  ambientLight.position.set(10,10,-10);
   scene.add(ambientLight);
 
-  // Directional Light for Space
-  const sunLight = new THREE.DirectionalLight(0xffffff, 2);
-  sunLight.position.set(-2, 0.5, 5);
+  // // Directional Light for Space
+  const sunLight = new THREE.DirectionalLight(0xffffff, .5);
+  sunLight.position.set(-5, 0.5, 5);
   scene.add(sunLight);
+
+  // Ambient Light on Earth
+  const earthLight = new THREE.AmbientLight(0xffffff, 2.1);
+
+  // Directional Light on Earth
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6)
+  directionalLight.castShadow = true
+  directionalLight.shadow.mapSize.set(1024, 1024)
+  directionalLight.shadow.camera.far = 15
+  directionalLight.shadow.camera.left = - 7
+  directionalLight.shadow.camera.top = 7
+  directionalLight.shadow.camera.right = 7
+  directionalLight.shadow.camera.bottom = - 7
+  directionalLight.position.set(5, 5, 5)
 
   // Load texture helper function
   const loadTexture = (url) => {
@@ -186,14 +204,14 @@ async function main() {
   };
 
   // Create Stars
-  stars = getStarfield({ numStars: 1000 });
+  stars = getStarfield({ numStars: 1500 });
   scene.add(stars);
 
   // Create Galaxy
   const createGalaxy = () => {
     const galaxyGeometry = new THREE.SphereGeometry(65, 50, 50);
     const galaxyMaterial = new THREE.MeshStandardMaterial({
-      color: 0x000000,
+      color: 0x090808,
       side: THREE.BackSide,
     });
 
@@ -233,11 +251,16 @@ async function main() {
 
   // Create Ground
   const createGround = () => {
-    const groundGeometry = new THREE.PlaneGeometry(500, 500);
-    const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
+    const groundGeometry = new THREE.PlaneGeometry(10, 10);
+    const groundMaterial = new THREE.MeshLambertMaterial({
+      color: "darkgreen",
+      metalness: 0.3,
+      roughness: 0.4,
+    });
     ground = new THREE.Mesh(groundGeometry, groundMaterial);
     ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -8;
+    ground.position.y = 0;
+    ground.receiveShadow = true;
 
     return ground;
   };
@@ -282,36 +305,27 @@ async function main() {
     };
   };
 
-  // // Add physics
-  // WORLD.gravity.set(0, -9.82, 0);
-  // WORLD.broadphase = new CANNON.NaiveBroadphase();
-  // WORLD.solver.iterations = 10;
+  // Sphere/ball for physics testing
+  const sphereMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(0.5, 32, 32),
+    new THREE.MeshStandardMaterial({
+      color: 0x2031cd,
+      roughness: 0.4,
+      metalness: 0.3,
+    })
+  );
+  sphereMesh.castShadow = true;
+  sphereMesh.position.y = 1;
 
-  // const addPhysics = () => {
-
-  //   const groundShape = new CANNON.Plane();
-  //   const groundBody = new CANNON.Body({ mass: 0 });
-  //   groundBody.addShape(groundShape);
-  //   groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
-  //   WORLD.addBody(groundBody);
-
-  // };
-
-  // // Create a physics body for the character
-  // const createCharacterPhysicsBody = () => {
-  //   const shape = new CANNON.Box(new CANNON.Vec3(0.5, 1, 0.5));
-  //   const body = new CANNON.Body({ mass: 5 });
-  //   body.addShape(shape);
-  //   body.position.set(0, 5, 0);
-  //   WORLD.addBody(body);
-  // };
-
-  // // Update physics
-  // const updatePhysics = (delta) => {
-  //   WORLD.step(1 / 60, delta, 3);
-  //   character.position.copy(characterBody.position);
-  //   character.quaternion.copy(characterBody.quaternion);
-  // };
+  // Add physics
+  world.gravity.set(0, -9.82, 0);
+  const sphereShape = new CANNON.Sphere(0.5);
+  const sphereBody = new CANNON.Body({
+    mass: 1, 
+    position: new CANNON.Vec3(0,1,0),
+    shape: sphereShape
+  })
+  world.addBody(sphereBody);
 
   // Add objects to the scene
   const addObjectsToScene = (objects) => {
@@ -341,6 +355,7 @@ async function main() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   };
 
   const onFirstScroll = () => {
@@ -373,12 +388,12 @@ async function main() {
       .onUpdate(() => camera.lookAt(earth.position))
       .onComplete(() => {
         scene.background.set(SKY);
-        scene.add(character, ground, onEarthSun);
+        scene.add(ground, onEarthSun, earthLight, sphereMesh, directionalLight);
 
-        scene.remove(sun, earthGroup, moon, stars, galaxy, lines);
-        camera.position.set(0,0, 20)
+        scene.remove(sun, earthGroup, moon, stars, galaxy, lines, sunLight, ambientLight);
+        camera.position.set(-3, 3, 3)
 
-        addObjectsToScene(models);
+        // addObjectsToScene(models);
 
         element.remove();
         document.querySelector(".sidepanel").classList.add("move__up");
@@ -401,6 +416,12 @@ async function main() {
     const delta = clock.getDelta();
     moonOrbitEarth();
     TWEEN.update();
+
+    const elapsedTime = clock.getElapsedTime();
+    const deltaTime = elapsedTime - oldElapsedTime;
+    oldElapsedTime = elapsedTime;
+    world.step(1/60, deltaTime, 3);
+
 
     if (earth) {
       earth.rotation.y += 0.2 * delta;
