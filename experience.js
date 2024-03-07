@@ -18,10 +18,16 @@ async function main() {
   const TARGET_POSITION = { z: 5 - 0.75 };
   const DURATION = 2100;
   const ACCELERATION = 1.5;
+  const DEFAULT = new CANNON.Material("default");
   
   // Three.js & Cannon.js
   const world = new CANNON.World();
   const textureLoader = new THREE.TextureLoader();
+  const contactMaterail = new CANNON.ContactMaterial(DEFAULT, DEFAULT, {
+    friction: 0.1,
+    restitution: 0.7,
+  });
+  world.addContactMaterial(contactMaterail);
 
   // Global variables
   let earth, moon, sun, stars, galaxy, lines, onEarthSun, cloudModels = [], balloonModel, airplaneModel, lightsMesh, cloudsMesh, glowMesh, ground,
@@ -252,15 +258,23 @@ async function main() {
   // Create Ground
   const createGround = () => {
     const groundGeometry = new THREE.PlaneGeometry(10, 10);
-    const groundMaterial = new THREE.MeshLambertMaterial({
+    const groundMaterial = new THREE.MeshStandardMaterial({
       color: "darkgreen",
       metalness: 0.3,
       roughness: 0.4,
+      side: THREE.DoubleSide,
     });
     ground = new THREE.Mesh(groundGeometry, groundMaterial);
     ground.rotation.x = -Math.PI / 2;
     ground.position.y = 0;
     ground.receiveShadow = true;
+
+    // Ground physics
+    const groundShape = new CANNON.Plane();
+    const groundBody = new CANNON.Body({ mass: 0});
+    groundBody.addShape(groundShape);
+    groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(-1,0,0), Math.PI / 2)
+    world.addBody(groundBody);
 
     return ground;
   };
@@ -307,7 +321,7 @@ async function main() {
 
   // Sphere/ball for physics testing
   const sphereMesh = new THREE.Mesh(
-    new THREE.SphereGeometry(0.5, 32, 32),
+    new THREE.SphereGeometry(0.5),
     new THREE.MeshStandardMaterial({
       color: 0x2031cd,
       roughness: 0.4,
@@ -322,10 +336,91 @@ async function main() {
   const sphereShape = new CANNON.Sphere(0.5);
   const sphereBody = new CANNON.Body({
     mass: 1, 
-    position: new CANNON.Vec3(0,1,0),
-    shape: sphereShape
+    position: new CANNON.Vec3(0,100,0),
+    shape: sphereShape,
   })
   world.addBody(sphereBody);
+
+  // Add keybinds to move the sphere
+ 
+  const keyStates = {};
+ 
+  document.addEventListener('keydown', (event) => {
+    if (event.key.toLowerCase() === ' ') {
+        const jumpVelocity = 4.5;
+        sphereBody.velocity.y = jumpVelocity;
+
+    }
+  });
+
+  // Event listeners for keydown and keyup events
+  document.addEventListener('keydown', (event) => {
+    keyStates[event.key.toLowerCase()] = true; // Set the state to true when the key is pressed
+  });
+  
+  document.addEventListener('keyup', (event) => {
+    keyStates[event.key.toLowerCase()] = false; // Set the state to false when the key is released
+  });
+  
+  // Function to update the sphere's velocity based on pressed keys
+  function updateVelocity(body, maxVelocity) {
+    let velocityChange = new CANNON.Vec3();
+  
+    if (keyStates['w']) velocityChange.z -= 1;
+    if (keyStates['s']) velocityChange.z += 1;
+    if (keyStates['a']) velocityChange.x -= 1;
+    if (keyStates['d']) velocityChange.x += 1;
+  
+    // Normalize the velocity change if necessary to ensure consistent speed in all directions
+    if (velocityChange.length() > 0) {
+      velocityChange.normalize();
+      velocityChange = velocityChange.scale(maxVelocity);
+    }
+  
+    // Update the body's velocity
+    body.velocity.x = velocityChange.x;
+    body.velocity.z = velocityChange.z;
+  }
+
+  // Add test cubes for physics testing
+  const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
+  const cubeMaterial = new THREE.MeshStandardMaterial({ color: "red" });
+
+  // First cube
+  const cube1 = new THREE.Mesh(cubeGeometry, cubeMaterial);
+  cube1.position.set(-2, 0.5, 0);
+  scene.add(cube1);
+
+  // Add physics to the first cube
+  const cubeShape1 = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));
+  const cubeBody1 = new CANNON.Body({ mass: 0, shape: cubeShape1 });
+  cubeBody1.position.set(cube1.position.x, cube1.position.y, cube1.position.z);
+  world.addBody(cubeBody1);
+
+  // Enable collision between the sphere and the first cube
+  cubeBody1.addEventListener("collide", (e) => {
+    if (e.body === sphereBody) {
+      console.log("Collision between sphere and first cube");
+    }
+  });
+
+  // Second cube
+  const cube2 = new THREE.Mesh(cubeGeometry, cubeMaterial);
+  cube2.position.set(2, 0.5, 0);
+  scene.add(cube2);
+
+  // Add physics to the second cube
+  const cubeShape2 = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));
+  const cubeBody2 = new CANNON.Body({ mass: 0, shape: cubeShape2});
+  cubeBody2.position.set(cube2.position.x, cube2.position.y, cube2.position.z);
+  world.addBody(cubeBody2);
+
+  // Enable collision between the sphere and the second cube
+  cubeBody2.addEventListener("collide", (e) => {
+    if (e.body === sphereBody) {
+      console.log("Collision between sphere and second cube");
+    }
+  });
 
   // Add objects to the scene
   const addObjectsToScene = (objects) => {
@@ -421,7 +516,9 @@ async function main() {
     const deltaTime = elapsedTime - oldElapsedTime;
     oldElapsedTime = elapsedTime;
     world.step(1/60, deltaTime, 3);
-
+    sphereMesh.position.copy(sphereBody.position);
+    sphereMesh.quaternion.copy(sphereBody.quaternion);
+    updateVelocity(sphereBody, 5);
 
     if (earth) {
       earth.rotation.y += 0.2 * delta;
@@ -505,14 +602,11 @@ async function main() {
 
 main().catch(console.error);
 
-// TODO: Add physics
-
 // TODO: Add character movement & make the character fall from the top of the screen/sky after the animation is complete
 
 // TODO: Create character in blender
 
 // TODO: Create scene in blender
-
 
 // const backgroundTexture = textureLoader.load("backgroundtest.jpg");
 // const addBackground = () => {
