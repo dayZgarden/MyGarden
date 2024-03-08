@@ -35,7 +35,8 @@ async function main() {
     earthGroup = new THREE.Group(),
     clock = new THREE.Clock(),
     hasScrolled = false,
-    oldElapsedTime = 0;
+    oldElapsedTime = 0,
+    tweenComplete = false;
 
   // Arrays
   geom.setAttribute(
@@ -257,25 +258,32 @@ async function main() {
 
   // Create Ground
   const createGround = () => {
-    const groundGeometry = new THREE.PlaneGeometry(10, 10);
+    const groundLength = 10; 
+    const groundWidth = 10;  
+    const groundThickness = 0.5; 
+  
+    const groundGeometry = new THREE.BoxGeometry(groundLength, groundThickness, groundWidth);
     const groundMaterial = new THREE.MeshStandardMaterial({
       color: "darkgreen",
       metalness: 0.3,
       roughness: 0.4,
       side: THREE.DoubleSide,
     });
+  
     ground = new THREE.Mesh(groundGeometry, groundMaterial);
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = 0;
+    ground.position.y = -groundThickness / 2; // Adjust position so the top surface is at y=0
     ground.receiveShadow = true;
-
+  
     // Ground physics
-    const groundShape = new CANNON.Plane();
-    const groundBody = new CANNON.Body({ mass: 0});
-    groundBody.addShape(groundShape);
-    groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(-1,0,0), Math.PI / 2)
+    const groundShape = new CANNON.Box(new CANNON.Vec3(groundLength / 2, groundThickness / 2, groundWidth / 2));
+    const groundBody = new CANNON.Body({
+      mass: 0, // Static
+      shape: groundShape,
+    });
+  
+    groundBody.position.set(ground.position.x, ground.position.y + groundThickness / 2, ground.position.z);
     world.addBody(groundBody);
-
+  
     return ground;
   };
 
@@ -318,6 +326,8 @@ async function main() {
       characterModel,
     };
   };
+
+  const cameraOffset = new THREE.Vector3(0, 2, 5);
 
   // Sphere/ball for physics testing
   const sphereMesh = new THREE.Mesh(
@@ -384,43 +394,24 @@ async function main() {
 
   // Add test cubes for physics testing
   const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
-  const cubeMaterial = new THREE.MeshStandardMaterial({ color: "red" });
+  const cubeMaterial = new THREE.MeshStandardMaterial({ color: "black" });
 
-  // First cube
-  const cube1 = new THREE.Mesh(cubeGeometry, cubeMaterial);
-  cube1.position.set(-2, 0.5, 0);
-  scene.add(cube1);
+  for (let i = 0; i < 10; i++) {
+    const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+    cube.position.set(Math.random() * 10 - 5, Math.random() * 3 + 1, Math.random() * 10 - 5);
+    scene.add(cube);
 
-  // Add physics to the first cube
-  const cubeShape1 = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));
-  const cubeBody1 = new CANNON.Body({ mass: 0, shape: cubeShape1 });
-  cubeBody1.position.set(cube1.position.x, cube1.position.y, cube1.position.z);
-  world.addBody(cubeBody1);
+    const cubeShape = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));
+    const cubeBody = new CANNON.Body({ mass: 0, shape: cubeShape });
+    cubeBody.position.set(cube.position.x, cube.position.y, cube.position.z);
+    world.addBody(cubeBody);
 
-  // Enable collision between the sphere and the first cube
-  cubeBody1.addEventListener("collide", (e) => {
-    if (e.body === sphereBody) {
-      console.log("Collision between sphere and first cube");
-    }
-  });
-
-  // Second cube
-  const cube2 = new THREE.Mesh(cubeGeometry, cubeMaterial);
-  cube2.position.set(2, 0.5, 0);
-  scene.add(cube2);
-
-  // Add physics to the second cube
-  const cubeShape2 = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));
-  const cubeBody2 = new CANNON.Body({ mass: 0, shape: cubeShape2});
-  cubeBody2.position.set(cube2.position.x, cube2.position.y, cube2.position.z);
-  world.addBody(cubeBody2);
-
-  // Enable collision between the sphere and the second cube
-  cubeBody2.addEventListener("collide", (e) => {
-    if (e.body === sphereBody) {
-      console.log("Collision between sphere and second cube");
-    }
-  });
+    cubeBody.addEventListener("collide", (e) => {
+      if (e.body === sphereBody) {
+        console.log(`Collision between sphere and cube ${i}`);
+      }
+    });
+  }
 
   // Add objects to the scene
   const addObjectsToScene = (objects) => {
@@ -492,6 +483,7 @@ async function main() {
 
         element.remove();
         document.querySelector(".sidepanel").classList.add("move__up");
+        tweenComplete = true;
       })
       .start();
 
@@ -519,6 +511,15 @@ async function main() {
     sphereMesh.position.copy(sphereBody.position);
     sphereMesh.quaternion.copy(sphereBody.quaternion);
     updateVelocity(sphereBody, 5);
+
+    if (tweenComplete){
+      const spherePosition = new THREE.Vector3();
+      sphereMesh.getWorldPosition(spherePosition);
+      camera.position.x = spherePosition.x + cameraOffset.x;
+      camera.position.y = spherePosition.y + cameraOffset.y;
+      camera.position.z = spherePosition.z + cameraOffset.z;
+      camera.lookAt(spherePosition);
+    }
 
     if (earth) {
       earth.rotation.y += 0.2 * delta;
@@ -602,9 +603,7 @@ async function main() {
 
 main().catch(console.error);
 
-// TODO: Add character movement & make the character fall from the top of the screen/sky after the animation is complete
-
-// TODO: Create character in blender
+// TODO: 3rd person camera
 
 // TODO: Create scene in blender
 
