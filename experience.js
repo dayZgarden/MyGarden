@@ -392,27 +392,6 @@ async function main() {
     body.velocity.z = velocityChange.z;
   }
 
-  // Add test cubes for physics testing
-  const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
-  const cubeMaterial = new THREE.MeshStandardMaterial({ color: "black" });
-
-  for (let i = 0; i < 10; i++) {
-    const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-    cube.position.set(Math.random() * 10 - 5, Math.random() * 3 + 1, Math.random() * 10 - 5);
-    scene.add(cube);
-
-    const cubeShape = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));
-    const cubeBody = new CANNON.Body({ mass: 0, shape: cubeShape });
-    cubeBody.position.set(cube.position.x, cube.position.y, cube.position.z);
-    world.addBody(cubeBody);
-
-    cubeBody.addEventListener("collide", (e) => {
-      if (e.body === sphereBody) {
-        console.log(`Collision between sphere and cube ${i}`);
-      }
-    });
-  }
-
   // Add objects to the scene
   const addObjectsToScene = (objects) => {
     const { cloudModel, balloonModel, airplaneModel, characterModel } = objects;
@@ -480,6 +459,26 @@ async function main() {
         camera.position.set(-3, 3, 3)
 
         // addObjectsToScene(models);
+
+        const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
+        const cubeMaterial = new THREE.MeshStandardMaterial({ color: "black" });
+
+        for (let i = 0; i < 10; i++) {
+          const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+          cube.position.set(Math.random() * 10 - 5, Math.random() * 3 + 1, Math.random() * 10 - 5);
+          scene.add(cube);
+
+          const cubeShape = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));
+          const cubeBody = new CANNON.Body({ mass: 0, shape: cubeShape });
+          cubeBody.position.set(cube.position.x, cube.position.y, cube.position.z);
+          world.addBody(cubeBody);
+
+          cubeBody.addEventListener("collide", (e) => {
+            if (e.body === sphereBody) {
+              console.log(`Collision between sphere and cube ${i}`);
+            }
+          });
+        }
 
         element.remove();
         document.querySelector(".sidepanel").classList.add("move__up");
@@ -588,13 +587,20 @@ async function main() {
     scene.add(stars);
     scene.add(galaxy);
 
-    window.addEventListener("resize", onWindowResize);
     document.querySelector('.loading__screen').style.display = 'none';
-    document.querySelector('.space').style.display = 'block';
-    document.querySelector('.sidepanel').style.display = 'block';
+    document.querySelector('.credit').style.display = 'flex';
+
+    setTimeout(() => {
+      document.querySelector('.credit').style.display = 'none';
+      document.querySelector('.space').style.display = 'block';
+      document.querySelector('.sidepanel').style.display = 'block';
+    }, 3000)
+
+
     // createCharacterPhysicsBody();
     // addPhysics();
     animate();
+    window.addEventListener("resize", onWindowResize);
   };
 
   await init();
@@ -603,30 +609,11 @@ async function main() {
 
 main().catch(console.error);
 
+// TODO: Customize Loading screen
+
+// TODO: Add transitions between loading screen, credits screen, then scene
+
 // TODO: 3rd person camera
 
 // TODO: Create scene in blender
-
-// const backgroundTexture = textureLoader.load("backgroundtest.jpg");
-// const addBackground = () => {
-//   backgroundTexture.wrapS = THREE.ClampToEdgeWrapping;
-//   backgroundTexture.wrapT = THREE.ClampToEdgeWrapping;
-//   backgroundTexture.minFilter = THREE.LinearFilter;
-
-//   let height = 100;
-
-//   const aspectRatio = window.innerWidth / window.innerHeight;
-//   const backgroundGeometry = new THREE.PlaneGeometry(
-//     200 * aspectRatio,
-//     height * aspectRatio
-//   );
-//   const backgroundMaterial = new THREE.MeshBasicMaterial({
-//     map: backgroundTexture,
-//   });
-//   const backgroundMesh = new THREE.Mesh(backgroundGeometry, backgroundMaterial);
-//   backgroundMaterial.map = backgroundTexture;
-//   backgroundMaterial.map.minFilter = THREE.LinearFilter;
-//   backgroundMaterial.needsUpdate = true;
-//   backgroundMesh.position.set(0, 0, -100);
-// };
 
