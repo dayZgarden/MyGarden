@@ -573,6 +573,32 @@ async function main() {
     renderer.render(scene, camera);
   };
 
+  const loadingScreen = document.querySelector('.loading__screen__container');
+  const loadingText = document.querySelector('.loading__screen__container__text');
+
+  const updateLoadingScreen = (progress) => {
+    const size = 21.5 * progress; 
+    loadingScreen.style.height = `${size}px`;
+    loadingScreen.style.width = `${size}px`;
+  
+    if (progress >= 30) {
+      loadingText.style.color = 'white';
+    }
+  
+  };
+  
+  let progress = 0;
+  const interval = setInterval(() => {
+    if (progress < 100) {
+      progress += 2.25;
+      updateLoadingScreen(progress);
+    } else {
+      clearInterval(interval);
+    }
+  }, 50);
+
+  updateLoadingScreen();
+
   // Initialize the scene
   const init = async () => {
     document.querySelector('.loading__screen').style.display = 'flex';
@@ -587,14 +613,12 @@ async function main() {
     scene.add(stars);
     scene.add(galaxy);
 
-    document.querySelector('.loading__screen').style.display = 'none';
-    document.querySelector('.credit').style.display = 'flex';
-
     setTimeout(() => {
-      document.querySelector('.credit').style.display = 'none';
-      document.querySelector('.space').style.display = 'block';
-      document.querySelector('.sidepanel').style.display = 'block';
-    }, 3000)
+      document.querySelector('.loading__screen').style.display = 'none';
+        document.querySelector('.space').style.display = 'block';
+        document.querySelector('.sidepanel').style.display = 'block';
+    }, 4000)
+
 
 
     // createCharacterPhysicsBody();
@@ -616,4 +640,3 @@ main().catch(console.error);
 // TODO: 3rd person camera
 
 // TODO: Create scene in blender
-
