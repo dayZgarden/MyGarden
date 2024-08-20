@@ -1,13 +1,14 @@
 import * as THREE from "three";
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import * as TWEEN from "@tweenjs/tween.js";
 import getStarfield from "./getStarfield";
 import getFresnelMat from "./getFresnelMat";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import * as CANNON from 'cannon';
+import { TextGeometry } from "three/examples/jsm/geometries/TextGeometry.js";
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
+
 
 async function main() {
-
   // Constants
   const TILT = -23.5 * (Math.PI / 180);
   const SPACE = new THREE.Color(0x000000);
@@ -18,25 +19,35 @@ async function main() {
   const TARGET_POSITION = { z: 5 - 0.75 };
   const DURATION = 2100;
   const ACCELERATION = 1.5;
-  const DEFAULT = new CANNON.Material("default");
-  
+
   // Three.js & Cannon.js
-  const world = new CANNON.World();
   const textureLoader = new THREE.TextureLoader();
-  const contactMaterail = new CANNON.ContactMaterial(DEFAULT, DEFAULT, {
-    friction: 0.1,
-    restitution: 0.7,
-  });
-  world.addContactMaterial(contactMaterail);
 
   // Global variables
-  let earth, moon, sun, stars, galaxy, lines, onEarthSun, cloudModels = [], balloonModel, airplaneModel, lightsMesh, cloudsMesh, glowMesh, ground,
+  let earth,
+    moon,
+    sun,
+    stars,
+    galaxy,
+    lines,
+    cloudModels = [],
+    balloonModel,
+    airplaneModel,
+    lightsMesh,
+    cloudsMesh,
+    glowMesh,
+    ground,
+    tree,
+    sun2,
+    cloudModel,
+    grass,
     geom = new THREE.BufferGeometry(),
     earthGroup = new THREE.Group(),
     clock = new THREE.Clock(),
     hasScrolled = false,
     oldElapsedTime = 0,
-    tweenComplete = false;
+    tweenComplete = false,
+    cloudGroup = new THREE.Group();
 
   // Arrays
   geom.setAttribute(
@@ -67,23 +78,23 @@ async function main() {
   camera.position.set(0, 0, 20);
 
   // Renderer
-  const renderer = new THREE.WebGLRenderer({antialias: true });
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
-  
+
   // Controls
   const controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableZoom = true;
+  controls.enableZoom = false;
   controls.enablePan = true;
   controls.enableRotate = true;
 
   // Ambient Light For Space
   const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
-  ambientLight.position.set(10,10,-10);
+  ambientLight.position.set(10, 10, -10);
   scene.add(ambientLight);
 
   // // Directional Light for Space
-  const sunLight = new THREE.DirectionalLight(0xffffff, .5);
+  const sunLight = new THREE.DirectionalLight(0xffffff, 0.5);
   sunLight.position.set(-5, 0.5, 5);
   scene.add(sunLight);
 
@@ -91,15 +102,15 @@ async function main() {
   const earthLight = new THREE.AmbientLight(0xffffff, 2.1);
 
   // Directional Light on Earth
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6)
-  directionalLight.castShadow = true
-  directionalLight.shadow.mapSize.set(1024, 1024)
-  directionalLight.shadow.camera.far = 15
-  directionalLight.shadow.camera.left = - 7
-  directionalLight.shadow.camera.top = 7
-  directionalLight.shadow.camera.right = 7
-  directionalLight.shadow.camera.bottom = - 7
-  directionalLight.position.set(5, 5, 5)
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+  directionalLight.castShadow = true;
+  directionalLight.shadow.mapSize.set(1024, 1024);
+  directionalLight.shadow.camera.far = 15;
+  directionalLight.shadow.camera.left = -7;
+  directionalLight.shadow.camera.top = 7;
+  directionalLight.shadow.camera.right = 7;
+  directionalLight.shadow.camera.bottom = -7;
+  directionalLight.position.set(5, 5, 5);
 
   // Load texture helper function
   const loadTexture = (url) => {
@@ -107,7 +118,7 @@ async function main() {
       const textureLoader = new THREE.TextureLoader();
       textureLoader.load(url, resolve, undefined, reject);
     });
-  }
+  };
 
   // Load model helper function
   const loadModel = (url) => {
@@ -115,7 +126,7 @@ async function main() {
       const loader = new GLTFLoader();
       loader.load(url, resolve, undefined, reject);
     });
-  }
+  };
 
   // Create Earth
   const createEarth = async () => {
@@ -230,7 +241,6 @@ async function main() {
 
   // Create Lines
   function createLines() {
-
     for (let line_index = 0; line_index < LINE_COUNT; line_index++) {
       let x = Math.random() * 400 - 200;
       let y = Math.random() * 200 - 100;
@@ -258,45 +268,28 @@ async function main() {
 
   // Create Ground
   const createGround = () => {
-    const groundLength = 10; 
-    const groundWidth = 10;  
-    const groundThickness = 0.5; 
-  
-    const groundGeometry = new THREE.BoxGeometry(groundLength, groundThickness, groundWidth);
+    const groundLength = 500;
+    const groundWidth = 500;
+    const groundThickness = 0.5;
+
+    const groundGeometry = new THREE.BoxGeometry(
+      groundLength,
+      groundThickness,
+      groundWidth
+    );
     const groundMaterial = new THREE.MeshStandardMaterial({
-      color: "darkgreen",
+      color: 0x101f01,
       metalness: 0.3,
       roughness: 0.4,
       side: THREE.DoubleSide,
     });
-  
+
     ground = new THREE.Mesh(groundGeometry, groundMaterial);
-    ground.position.y = -groundThickness / 2; // Adjust position so the top surface is at y=0
+    ground.position.y = -300;
     ground.receiveShadow = true;
-  
-    // Ground physics
-    const groundShape = new CANNON.Box(new CANNON.Vec3(groundLength / 2, groundThickness / 2, groundWidth / 2));
-    const groundBody = new CANNON.Body({
-      mass: 0, // Static
-      shape: groundShape,
-    });
-  
-    groundBody.position.set(ground.position.x, ground.position.y + groundThickness / 2, ground.position.z);
-    world.addBody(groundBody);
-  
+
     return ground;
   };
-
-  // Create On Earth Sun
-  const createOnEarthSun = () => {
-    const onEarthSunGeometry = new THREE.SphereGeometry(7, 350, 50);
-    const onEarthSunMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-    onEarthSun = new THREE.Mesh(onEarthSunGeometry, onEarthSunMaterial);
-    onEarthSun.scale.set(2, 2, 2);
-    onEarthSun.position.set(80, 35, -50);
-    
-    return onEarthSun;
-  }
 
   // Function to animate the moon orbiting the earth
   const moonOrbitEarth = () => {
@@ -304,11 +297,13 @@ async function main() {
 
     if (moon && earth) {
       moon.position.x =
-        earth.position.x + Math.cos(elapsedTime * ORBITAL_SPEED) * ORBITAL_RADIUS;
+        earth.position.x +
+        Math.cos(elapsedTime * ORBITAL_SPEED) * ORBITAL_RADIUS;
       moon.position.z =
-        earth.position.z + Math.sin(elapsedTime * ORBITAL_SPEED) * ORBITAL_RADIUS;
+        earth.position.z +
+        Math.sin(elapsedTime * ORBITAL_SPEED) * ORBITAL_RADIUS;
     }
-  }
+  };
 
   // Load models
   const loadModels = async () => {
@@ -327,94 +322,6 @@ async function main() {
     };
   };
 
-  const cameraOffset = new THREE.Vector3(0, 2, 5);
-
-  // Sphere/ball for physics testing
-  const sphereMesh = new THREE.Mesh(
-    new THREE.SphereGeometry(0.5),
-    new THREE.MeshStandardMaterial({
-      color: 0x2031cd,
-      roughness: 0.4,
-      metalness: 0.3,
-    })
-  );
-  sphereMesh.castShadow = true;
-  sphereMesh.position.y = 1;
-
-  // Add physics
-  world.gravity.set(0, -9.82, 0);
-  const sphereShape = new CANNON.Sphere(0.5);
-  const sphereBody = new CANNON.Body({
-    mass: 1, 
-    position: new CANNON.Vec3(0,100,0),
-    shape: sphereShape,
-  })
-  world.addBody(sphereBody);
-
-  // Add keybinds to move the sphere
- 
-  const keyStates = {};
- 
-  document.addEventListener('keydown', (event) => {
-    if (event.key.toLowerCase() === ' ') {
-        const jumpVelocity = 4.5;
-        sphereBody.velocity.y = jumpVelocity;
-
-    }
-  });
-
-  // Event listeners for keydown and keyup events
-  document.addEventListener('keydown', (event) => {
-    keyStates[event.key.toLowerCase()] = true; // Set the state to true when the key is pressed
-  });
-  
-  document.addEventListener('keyup', (event) => {
-    keyStates[event.key.toLowerCase()] = false; // Set the state to false when the key is released
-  });
-  
-  // Function to update the sphere's velocity based on pressed keys
-  function updateVelocity(body, maxVelocity) {
-    let velocityChange = new CANNON.Vec3();
-  
-    if (keyStates['w']) velocityChange.z -= 1;
-    if (keyStates['s']) velocityChange.z += 1;
-    if (keyStates['a']) velocityChange.x -= 1;
-    if (keyStates['d']) velocityChange.x += 1;
-  
-    // Normalize the velocity change if necessary to ensure consistent speed in all directions
-    if (velocityChange.length() > 0) {
-      velocityChange.normalize();
-      velocityChange = velocityChange.scale(maxVelocity);
-    }
-  
-    // Update the body's velocity
-    body.velocity.x = velocityChange.x;
-    body.velocity.z = velocityChange.z;
-  }
-
-  // Add objects to the scene
-  const addObjectsToScene = (objects) => {
-    const { cloudModel, balloonModel, airplaneModel, characterModel } = objects;
-
-    // scene.add(cloudModel.scene);
-
-    // for (let i = 0; i < 35; i++) {
-    //   const cloudClone = cloudModel.scene.clone();
-    //   cloudClone.scale.set(0.65, 0.65, 0.65);
-    //   cloudClone.position.set(
-    //     Math.random() * 200 - 100,
-    //     Math.random() * 12 + 6,
-    //     Math.random() * -10 - 10
-    //   );
-    //   scene.add(cloudClone);
-    // }
-
-    // scene.add(balloonModel.scene);
-    // scene.add(airplaneModel.scene);
-
-    scene.add(characterModel.scene);
-  };
-
   // Resize handler
   const onWindowResize = () => {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -430,16 +337,371 @@ async function main() {
       animateCameraToEarth();
       document.body.removeEventListener("scroll", onFirstScroll);
     }
-  }
+  };
 
   const models = await loadModels();
 
-  const animateCameraToEarth = () => {
+  // Load tree
+  const loader = new GLTFLoader();
+  loader.load("tree.00.glb", (gltf) => {
+    tree = gltf.scene;
+    tree.scale.set(40, 45, 40);
+    tree.rotation.y = -0.5 * Math.PI;
+    tree.position.y = -300;
+  });
 
+  const vertexShader = `
+  varying vec3 vNormal;
+  void main() {
+    vNormal = normalize(normalMatrix * normal);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+  `;
+  
+  const fragmentShader = `
+  uniform vec3 color;
+  varying vec3 vNormal;
+  void main() {
+    vec3 modifiedColor = color; // Use a single uniform color
+    gl_FragColor = vec4(modifiedColor, 1.0);
+  }
+  `;
+  
+  // Updated uniforms
+  const uniforms = {
+    color: { type: 'vec3', value: new THREE.Color(0xffff00) },
+  };
+
+  const sunMaterial = new THREE.ShaderMaterial({
+    vertexShader,
+    fragmentShader,
+    uniforms,
+  });
+
+  // Create on earth sun
+  const sunGeometry = new THREE.SphereGeometry(70, 25, 25);
+  sun2 = new THREE.Mesh(sunGeometry, sunMaterial);
+  sun2.position.set(-50, 90, -200);
+
+  const grassGroup = new THREE.Group();
+
+  loader.load("grass2.glb", (gltf) => {
+    grass = gltf.scene;
+    grass.scale.set(3, 3, 3);
+    grass.position.y = -300;
+
+    const groundWidth = 500;
+    const groundLength = 500;
+    const grassSpacing = 55; // Increase the spacing between grass clones
+
+    for (let x = -groundWidth / 2; x < groundWidth / 2; x += grassSpacing) {
+      for (let z = -groundLength / 2; z < groundLength / 2; z += grassSpacing) {
+        const grassClone = grass.clone();
+        grassClone.position.set(x, -300, z);
+        grassGroup.add(grassClone);
+      }
+    }
+  });
+
+  // Create clouds
+  function createCloudDome() {
+    const cloudCount = 120;
+    const radius = 200;
+    for (let i = 0; i < cloudCount; i++) {
+      const cloudClone = cloudModel.clone();
+      const angle = Math.random() * Math.PI * 2;
+      const distance = Math.random() * radius;
+      const height = Math.random() * 240 - 10;
+      const scale = Math.random() * 2 + 0.5;
+
+      cloudClone.position.set(
+        Math.cos(angle) * distance,
+        height,
+        Math.sin(angle) * distance
+      );
+
+      cloudClone.scale.set(scale, scale, scale);
+      cloudClone.lookAt(0, 0, 0);
+      cloudGroup.add(cloudClone);
+    }
+  }
+
+  loader.load("cloud_1.glb", (gltf) => {
+    cloudModel = gltf.scene;
+    cloudModel.scale.set(0.65, 0.65, 0.65);
+    cloudModel.traverse((node) => {
+      if (node.isMesh) {
+        node.material.transparent = true;
+        node.material.opacity = 0.8;
+      }
+    });
+    createCloudDome();
+  });
+
+  // Load Airplane Glb and save it to a variable
+  loader.load("airplane.glb", (gltf) => {
+    airplaneModel = gltf.scene;
+    airplaneModel.scale.set(3, 3, 3);
+    airplaneModel.position.set(0, 0, 0);
+    airplaneModel.rotation.y = Math.PI
+  }); 
+
+  // Load textures for overlay
+  const overlayTextures = [
+    textureLoader.load("/Perplexed.JPG"),
+    textureLoader.load("/P1.JPG"),
+    textureLoader.load("/Nutrify.JPG"),
+    textureLoader.load("/sdc.JPG"),
+    textureLoader.load("/port1.JPG"),
+    textureLoader.load("/port2.JPG"),
+    textureLoader.load("/googleclone.JPG"),
+    textureLoader.load("/hulu.JPG"),
+    textureLoader.load("/twitter.JPG"),
+    textureLoader.load("/library.JPG"),
+    textureLoader.load("/skybackground.jpg"),
+    textureLoader.load("/skybackground.jpg"),
+  ];
+
+// Create box geometry
+const boxGeometry = new THREE.BoxGeometry(45, 40, 2);
+
+// Create overlay planes
+const planes = [];
+const positions = [
+  [-100, -80, -20, Math.PI / 2.2],
+  [-95, -90, 30, Math.PI / -2.5],
+  [-65, -100, 75, Math.PI / -4],
+  [-25, -110, 105, Math.PI / -7.5],
+
+  [70, -175, -70, Math.PI / -4],
+  [105, -155, 10, Math.PI / 2],
+  [90, -145, 60, Math.PI / 3],
+  [55, -130, 95, Math.PI / 7],
+
+  [25, -190, -100, Math.PI / -8.5],
+  [-30, -200, -105, .25],
+  // [-15, -210, -110, Math.PI / -0.25],
+  // [-55, -220, -100, Math.PI / 5.5],
+];
+
+// Manually set text positions and rotations
+const textPositions = [
+  [-95, -75, -35, -Math.PI / 2],  // Perplexed
+  [-95, -85, 15, Math.PI / -2.5],   // Player One
+  [-67, -98, 70, Math.PI / -4],     // Nutrify
+  [-30, -110, 105, Math.PI / -7.5], // Machine Learning Car
+
+  [108, -175, -65, Math.PI / 1.35],    // Three.js Portfolio
+  [130, -155, 20, Math.PI / 2],     // Portfolio
+  [105, -142, 75, Math.PI / 3],      // Google Clone
+  [60, -130, 110, Math.PI / 7],     // Hulu Clone
+
+  [68, -188, -100, Math.PI / 1.15],  // Twitter Clone
+  [-10, -200, -115, Math.PI / .95],           // Readora
+];
+
+// Project names
+const projectNames = [
+  "Perplexed",
+  "Player One",
+  "Nutrify",
+  "ML Car",
+  "3D Portfolio",
+  "Portfolio",
+  "Google Clone",
+  "Hulu Clone",
+  "Twitter Clone",
+  "Readora"
+];
+
+const projectNameColors = [
+  0xffffff, // Perplexed
+  0xffffff, // Player One
+  0x000000, // Nutrify
+  0xffffff, // Machine Learning Car
+  0xffffff, // Three.js Portfolio
+  0xffffff, // Portfolio
+  0x000000, // Google Clone
+  0xffffff, // Hulu Clone
+  0x000000, // Twitter Clone
+  0x000000, // Readora
+]
+
+ // Project URLs
+ const projectUrls = [
+  "https://day-ztrivia.vercel.app/",         // Perplexed
+  "https://day-zgamer.vercel.app/",         // Player One
+  "https://day-ztracker-react.vercel.app/",           // Nutrify
+  "https://self-driving-car-zkah.vercel.app/",             // ML Car
+  "https://first-three-js.vercel.app/",       // 3D Portfolio
+  "https://zyadalkurdi.com/",         // Portfolio
+  "https://day-z-search.vercel.app/",       // Google Clone
+  "https://hulu-cloned-mu.vercel.app/",         // Hulu Clone
+  "https://twitter-clone-steel-one.vercel.app/",      // Twitter Clone
+  "https://react-bookstore-zeta.vercel.app/"            // Readora
+];
+
+positions.forEach((pos, index) => {
+  const overlayMaterial = new THREE.MeshBasicMaterial({
+    map: overlayTextures[index],
+    transparent: true,
+    opacity: 0.9,
+  });
+
+  const plane = new THREE.Mesh(boxGeometry, overlayMaterial);
+  plane.position.set(pos[0], pos[1], pos[2]);
+  plane.rotation.y = pos[3];
+
+  // Attach the project URL to the plane's userData
+  plane.userData.projectUrl = projectUrls[index];
+
+  scene.add(plane);
+  planes.push(plane);
+
+});
+
+const textMeshes = [];
+
+const fontLoader = new FontLoader();
+fontLoader.load('/fonts/optimer_bold.typeface.json', function (font) {
+
+  // Create text geometry and material for each project
+  projectNames.forEach((name, index) => {
+    const textGeometry = new TextGeometry(name, {
+      font: font,
+      size: 5,
+      height: 0.25,
+      curveSegments: 12,
+      bevelEnabled: false,
+    });
+
+    const textMaterial = new THREE.MeshBasicMaterial({ 
+      // color: projectNameColors[index],
+      transparent: true,
+      opacity: 0.9,
+    });
+    const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+
+    // Center the text geometry relative to its bounding box
+    textGeometry.computeBoundingBox();
+    const boundingBox = textGeometry.boundingBox;
+    const textWidth = boundingBox.max.x - boundingBox.min.x;
+    const textHeight = boundingBox.max.y - boundingBox.min.y;
+
+    // Set text position and rotation manually based on the textPositions array
+    const textPos = textPositions[index];
+    textMesh.position.set(
+      textPos[0] - textWidth / 2, 
+      textPos[1] - textHeight / 2, 
+      textPos[2]
+    );
+    textMesh.rotation.y = textPos[3];
+
+    // Initially hide the text
+    textMesh.visible = false;
+    textMeshes.push(textMesh); // Store the text mesh
+
+    // Add the text mesh to the scene
+    scene.add(textMesh);
+  });
+});
+
+
+  const particlesGeometry = new THREE.BufferGeometry();
+  const particlesCount = 5000;
+
+  const posArray = new Float32Array(particlesCount * 3);
+  for (let i = 0; i < particlesCount * 3; i++) {
+    posArray[i] = (Math.random() - 0.5) * 1000;
+  }
+
+  particlesGeometry.setAttribute(
+    "position",
+    new THREE.BufferAttribute(posArray, 3)
+  );
+
+  const particlesMaterial = new THREE.PointsMaterial({
+    size: 0.5,
+    color: 0xffffff,
+  });
+
+  const particles = new THREE.Points(particlesGeometry, particlesMaterial);
+
+  let scrollPosition = 0;
+
+  function addHtmlContent() {
+    const newContent = document.createElement('div');
+    newContent.classList.add('additional-content');
+    newContent.innerHTML = `
+      <h2>Welcome to the Experience Section!</h2>
+    `;
+  
+    // Append the new content to the body or a specific section of your HTML
+    document.body.appendChild(newContent);
+  }
+
+  window.addEventListener("scroll", () => {
+      scrollPosition = window.scrollY;
+  });
+
+//   let previousScrollPosition = 0;
+//   let isAnimating = false;
+  
+//   window.addEventListener("scroll", () => {
+//       scrollPosition = window.scrollY;
+  
+//       // Detect if user is scrolling down or up
+//       const isScrollingDown = scrollPosition > previousScrollPosition;
+//       previousScrollPosition = scrollPosition;
+  
+//       // Trigger animation when scrolling down
+//       if (isScrollingDown && scrollPosition >= 6000 && !tweenComplete) {
+//           animateCameraToEarth();
+//       }
+  
+//       // Trigger reverse animation when scrolling back up
+//       if (!isScrollingDown && scrollPosition < 6000 && tweenComplete) {
+//           reverseCameraAnimation();
+//       }
+//   });
+
+//   const reverseCameraAnimation = () => {
+//     if (isAnimating) return;  // Prevents overlapping tweens
+//     isAnimating = true;
+//     lines = createLines();
+//     scene.add(lines);
+//     const element = document.querySelector(".space");
+
+//     new TWEEN.Tween(camera.position)
+//         .to({ x: 0, y: 0, z: 20 }, DURATION * ACCELERATION)
+//         .easing(TWEEN.Easing.Quadratic.InOut)
+//         .onUpdate(() => camera.lookAt(new THREE.Vector3(0, 0, 20)))  // Point the camera to the origin or desired object
+//         .onComplete(() => {
+//             // Restore original scene objects, add back space elements, etc.
+//             scene.add(sun, earthGroup, moon, stars, galaxy, sunLight, ambientLight);
+//             scene.remove(ground, earthLight, directionalLight, tree, grassGroup, particles);
+//             document.querySelector(".sidepanel").classList.remove("move__up");
+//             document.querySelector(".ScrollableContent").style.display = "none";
+//             scene.background = new THREE.Color(SPACE);
+//             element.style.display = "block";
+//             scene.remove(lines);
+
+//             tweenComplete = false;  // Reset the tween complete flag
+//             isAnimating = false;  // Allow future animations
+//         })
+//         .start();
+
+//     function updateTweens() {
+//         requestAnimationFrame(updateTweens);
+//         TWEEN.update();
+//     }
+//     updateTweens();
+// };
+
+  const animateCameraToEarth = () => {
     lines = createLines();
     scene.add(lines);
     ground = createGround();
-    onEarthSun = createOnEarthSun();
 
     setTimeout(() => {
       console.log("hi");
@@ -452,36 +714,108 @@ async function main() {
       .easing(TWEEN.Easing.Quadratic.InOut)
       .onUpdate(() => camera.lookAt(earth.position))
       .onComplete(() => {
-        scene.background.set(SKY);
-        scene.add(ground, onEarthSun, earthLight, sphereMesh, directionalLight);
+      // Raycaster and Mouse Vector
+      const raycaster = new THREE.Raycaster();
+      const mouse = new THREE.Vector2();
 
-        scene.remove(sun, earthGroup, moon, stars, galaxy, lines, sunLight, ambientLight);
-        camera.position.set(-3, 3, 3)
+      // Hover effect variables
+      let INTERSECTED = null;
+      let CLICKED = null;
 
-        // addObjectsToScene(models);
+      // Tweening function
+      const tweenScale = (object, to, duration) => {
+        new TWEEN.Tween(object.scale)
+          .to({ x: to, y: to, z: to }, duration)
+          .easing(TWEEN.Easing.Elastic.Out)
+          .start();
+      };
 
-        const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
-        const cubeMaterial = new THREE.MeshStandardMaterial({ color: "black" });
+      // Handle hover and scaling animation
+      window.addEventListener("mousemove", (event) => {
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-        for (let i = 0; i < 10; i++) {
-          const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-          cube.position.set(Math.random() * 10 - 5, Math.random() * 3 + 1, Math.random() * 10 - 5);
-          scene.add(cube);
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(planes);
 
-          const cubeShape = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));
-          const cubeBody = new CANNON.Body({ mass: 0, shape: cubeShape });
-          cubeBody.position.set(cube.position.x, cube.position.y, cube.position.z);
-          world.addBody(cubeBody);
-
-          cubeBody.addEventListener("collide", (e) => {
-            if (e.body === sphereBody) {
-              console.log(`Collision between sphere and cube ${i}`);
+        if (intersects.length > 0) {
+          if (INTERSECTED != intersects[0].object) {
+            if (INTERSECTED && INTERSECTED !== CLICKED) {
+              tweenScale(INTERSECTED, 1, 1500);
             }
-          });
-        }
 
-        element.remove();
+            INTERSECTED = intersects[0].object;
+            if (INTERSECTED !== CLICKED) {
+              tweenScale(INTERSECTED, 1.1, 1500);
+            }
+
+            // Show the corresponding text on hover
+            const index = planes.indexOf(INTERSECTED);
+            if (textMeshes[index]) {
+              textMeshes[index].visible = true;
+            }
+            document.body.style.cursor = "pointer";
+          }
+        } else {
+          if (INTERSECTED && INTERSECTED !== CLICKED) {
+            tweenScale(INTERSECTED, 1, 5000);
+            const index = planes.indexOf(INTERSECTED);
+            if (textMeshes[index]) {
+              textMeshes[index].visible = false;
+            }
+            INTERSECTED = null;
+          }
+          document.body.style.cursor = "auto";
+        }
+      });
+
+    // Handle clicks to open project URL
+  window.addEventListener("click", () => {
+    if (INTERSECTED) {
+      const projectUrl = INTERSECTED.userData.projectUrl;
+      if (projectUrl) {
+        window.open(projectUrl, "_blank"); // Open the project in a new tab
+      }
+    }
+  });
+
+
+  window.addEventListener("scroll", () => {
+    scrollPosition = window.scrollY;
+
+    if (
+      scrollPosition >= 6000 &&
+      !document.querySelector(".additional-content")
+    ) {
+      addHtmlContent();
+    }
+  });
+
+        scene.add(
+          ground,
+          earthLight,
+          directionalLight,
+          tree,
+          grassGroup,
+          particles,
+        );
+
+        scene.remove(
+          sun,
+          earthGroup,
+          moon,
+          stars,
+          galaxy,
+          lines,
+          sunLight,
+          ambientLight
+        );
+        camera.position.set(-3, 3, 3);
+
+        element.style.display = "none";
         document.querySelector(".sidepanel").classList.add("move__up");
+        document.querySelector(".ScrollableContent").style.display = "block";
+
         tweenComplete = true;
       })
       .start();
@@ -491,7 +825,7 @@ async function main() {
       TWEEN.update();
     }
     updateTweens();
-  }
+  };
 
   window.addEventListener("scroll", onFirstScroll);
 
@@ -506,18 +840,48 @@ async function main() {
     const elapsedTime = clock.getElapsedTime();
     const deltaTime = elapsedTime - oldElapsedTime;
     oldElapsedTime = elapsedTime;
-    world.step(1/60, deltaTime, 3);
-    sphereMesh.position.copy(sphereBody.position);
-    sphereMesh.quaternion.copy(sphereBody.quaternion);
-    updateVelocity(sphereBody, 5);
 
-    if (tweenComplete){
-      const spherePosition = new THREE.Vector3();
-      sphereMesh.getWorldPosition(spherePosition);
-      camera.position.x = spherePosition.x + cameraOffset.x;
-      camera.position.y = spherePosition.y + cameraOffset.y;
-      camera.position.z = spherePosition.z + cameraOffset.z;
-      camera.lookAt(spherePosition);
+    if (tweenComplete) {
+      camera.position.y = -scrollPosition * 0.05;
+
+      if (scrollPosition >= 6000 && scrollPosition <= 6200) {
+      } else if (scrollPosition >= 6200) {
+        camera.position.y = -500;
+        scene.background = new THREE.Color(0x29160f);
+        camera.lookAt(0, -20000, 0);
+      } else {
+        // scene.background = new THREE.Color(0x448ee4);
+
+        const canvas = document.createElement("canvas");
+        canvas.width = 512;
+        canvas.height = 512;
+        const context = canvas.getContext("2d");
+
+        // Create gradient
+        const gradient = context.createLinearGradient(0, 0, 0, 512);
+        gradient.addColorStop(0, "#B1B1B1"); // White at the top
+        gradient.addColorStop(1, "#4F6EDB"); // Purple at the bottom
+
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, 512, 512);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        scene.background = texture;
+        // cameras y position goes down the tree as the user scrolls
+
+        // the cameras x and z should go around the tree counter clockwise maintaining the same radius around the tree
+        camera.position.x = 150 * Math.cos(-scrollPosition * 0.002);
+        camera.position.z = 150 * Math.sin(-scrollPosition * 0.002);
+        camera.lookAt(0, -0.05 * scrollPosition, 0);
+      }
+
+      cloudGroup.children.forEach((cloud) => {
+        cloud.position.x += delta * 2; // Move clouds horizontally
+        if (cloud.position.x > 100) {
+          // Reset position when out of view
+          cloud.position.x = -100;
+        }
+      });
     }
 
     if (earth) {
@@ -567,15 +931,40 @@ async function main() {
       }
     }
 
-    // updatePhysics(delta);
-
     pos.needsUpdate = true;
     renderer.render(scene, camera);
   };
 
+  const loadingScreen = document.querySelector(".loading__screen__container");
+  const loadingText = document.querySelector(
+    ".loading__screen__container__text"
+  );
+
+  const updateLoadingScreen = (progress) => {
+    const size = 21.5 * progress;
+    loadingScreen.style.height = `${size}px`;
+    loadingScreen.style.width = `${size}px`;
+
+    if (progress >= 30) {
+      loadingText.style.color = "white";
+    }
+  };
+
+  let progress = 0;
+  const interval = setInterval(() => {
+    if (progress < 100) {
+      progress += 2.25;
+      updateLoadingScreen(progress);
+    } else {
+      clearInterval(interval);
+    }
+  }, 50);
+
+  updateLoadingScreen();
+
   // Initialize the scene
   const init = async () => {
-    document.querySelector('.loading__screen').style.display = 'flex';
+    document.querySelector(".loading__screen").style.display = "flex";
     const earthGroup = await createEarth();
     const moon = await createMoon();
     const sun = await createSun();
@@ -587,33 +976,26 @@ async function main() {
     scene.add(stars);
     scene.add(galaxy);
 
-    document.querySelector('.loading__screen').style.display = 'none';
-    document.querySelector('.credit').style.display = 'flex';
-
     setTimeout(() => {
-      document.querySelector('.credit').style.display = 'none';
-      document.querySelector('.space').style.display = 'block';
-      document.querySelector('.sidepanel').style.display = 'block';
-    }, 3000)
+      document.querySelector(".loading__screen").style.display = "none";
+      document.querySelector(".space").style.display = "block";
+      document.querySelector(".sidepanel").style.display = "block";
+    }, 5000);
 
-
-    // createCharacterPhysicsBody();
-    // addPhysics();
     animate();
     window.addEventListener("resize", onWindowResize);
   };
 
   await init();
-
-  }
+}
 
 main().catch(console.error);
 
-// TODO: Customize Loading screen
+/*
+  TODO: Enhance loading screen
+        Make a cool three.js navigation where it has cool effects on hover of each one and it takes up the whole screen
+        Enhance the projects section, make them have better hover effects and maybe use post processing
+        Complete projects section by allow the user to click on them for a more detailed view and hyperlink
+        Add work experience section in the ground following the tree
 
-// TODO: Add transitions between loading screen, credits screen, then scene
-
-// TODO: 3rd person camera
-
-// TODO: Create scene in blender
-
+*/
