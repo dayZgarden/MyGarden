@@ -563,7 +563,7 @@ positions.forEach((pos, index) => {
 const textMeshes = [];
 
 const fontLoader = new FontLoader();
-fontLoader.load('/fonts/optimer_bold.typeface.json', function (font) {
+fontLoader.load('/optimer_bold.typeface.json', function (font) {
 
   // Create text geometry and material for each project
   projectNames.forEach((name, index) => {
