@@ -562,6 +562,7 @@ positions.forEach((pos, index) => {
 
 const textMeshes = [];
 
+
 const fontLoader = new FontLoader();
 fontLoader.load('/optimer_bold.typeface.json', function (font) {
 
