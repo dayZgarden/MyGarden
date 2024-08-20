@@ -981,7 +981,7 @@ fontLoader.load('/optimer_bold.typeface.json', function (font) {
       document.querySelector(".loading__screen").style.display = "none";
       document.querySelector(".space").style.display = "block";
       document.querySelector(".sidepanel").style.display = "block";
-    }, 5000);
+    }, 100);
 
     animate();
     window.addEventListener("resize", onWindowResize);
