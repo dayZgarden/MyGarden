@@ -5,8 +5,7 @@ import getStarfield from "./getStarfield";
 import getFresnelMat from "./getFresnelMat";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { TextGeometry } from "three/examples/jsm/geometries/TextGeometry.js";
-import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
-
+import { FontLoader } from "three/examples/jsm/loaders/FontLoader.js";
 
 async function main() {
   // Constants
@@ -21,6 +20,7 @@ async function main() {
   const ACCELERATION = 1.5;
 
   // Three.js & Cannon.js
+  const fontLoader = new FontLoader();
   const textureLoader = new THREE.TextureLoader();
 
   // Global variables
@@ -99,7 +99,7 @@ async function main() {
   scene.add(sunLight);
 
   // Ambient Light on Earth
-  const earthLight = new THREE.AmbientLight(0xffffff, 2.1);
+  const earthLight = new THREE.AmbientLight(0xffffff, 1.5);
 
   // Directional Light on Earth
   const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
@@ -291,19 +291,20 @@ async function main() {
     return ground;
   };
 
-  // Function to animate the moon orbiting the earth
-  const moonOrbitEarth = () => {
-    const elapsedTime = clock.getElapsedTime();
+  let currentAngle = 0;
+  let hardStop = false;
 
-    if (moon && earth) {
-      moon.position.x =
-        earth.position.x +
-        Math.cos(elapsedTime * ORBITAL_SPEED) * ORBITAL_RADIUS;
-      moon.position.z =
-        earth.position.z +
-        Math.sin(elapsedTime * ORBITAL_SPEED) * ORBITAL_RADIUS;
+  const moonOrbitEarth = () => {
+    if (!moonStopped && !hardStop) {
+      currentAngle += ORBITAL_SPEED * 0.005;
+      
+      if (moon && earth) {
+        moon.position.x = earth.position.x + Math.cos(currentAngle) * ORBITAL_RADIUS;
+        moon.position.z = earth.position.z + Math.sin(currentAngle) * ORBITAL_RADIUS;
+      }
     }
   };
+  
 
   // Load models
   const loadModels = async () => {
@@ -330,15 +331,6 @@ async function main() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   };
 
-  const onFirstScroll = () => {
-    if (!hasScrolled) {
-      hasScrolled = true;
-      document.querySelector(".show").classList.remove("show");
-      animateCameraToEarth();
-      document.body.removeEventListener("scroll", onFirstScroll);
-    }
-  };
-
   const models = await loadModels();
 
   // Load tree
@@ -357,7 +349,7 @@ async function main() {
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
   `;
-  
+
   const fragmentShader = `
   uniform vec3 color;
   varying vec3 vNormal;
@@ -366,10 +358,10 @@ async function main() {
     gl_FragColor = vec4(modifiedColor, 1.0);
   }
   `;
-  
+
   // Updated uniforms
   const uniforms = {
-    color: { type: 'vec3', value: new THREE.Color(0xffff00) },
+    color: { type: "vec3", value: new THREE.Color(0xffff00) },
   };
 
   const sunMaterial = new THREE.ShaderMaterial({
@@ -436,15 +428,7 @@ async function main() {
       }
     });
     createCloudDome();
-  });
-
-  // Load Airplane Glb and save it to a variable
-  loader.load("airplane.glb", (gltf) => {
-    airplaneModel = gltf.scene;
-    airplaneModel.scale.set(3, 3, 3);
-    airplaneModel.position.set(0, 0, 0);
-    airplaneModel.rotation.y = Math.PI
-  }); 
+   });
 
   // Load textures for overlay
   const overlayTextures = [
@@ -466,7 +450,7 @@ async function main() {
 const boxGeometry = new THREE.BoxGeometry(45, 40, 2);
 
 // Create overlay planes
-const planes = [];
+let planes = [];
 const positions = [
   [-100, -80, -20, Math.PI / 2.2],
   [-95, -90, 30, Math.PI / -2.5],
@@ -479,25 +463,25 @@ const positions = [
   [55, -130, 95, Math.PI / 7],
 
   [25, -190, -100, Math.PI / -8.5],
-  [-30, -200, -105, .25],
+  [-30, -200, -105, 0.25],
   // [-15, -210, -110, Math.PI / -0.25],
   // [-55, -220, -100, Math.PI / 5.5],
 ];
 
 // Manually set text positions and rotations
 const textPositions = [
-  [-95, -75, -35, -Math.PI / 2],  // Perplexed
-  [-95, -85, 15, Math.PI / -2.5],   // Player One
-  [-67, -98, 70, Math.PI / -4],     // Nutrify
+  [-95, -75, -35, -Math.PI / 2], // Perplexed
+  [-95, -85, 15, Math.PI / -2.5], // Player One
+  [-67, -98, 70, Math.PI / -4], // Nutrify
   [-30, -110, 105, Math.PI / -7.5], // Machine Learning Car
 
-  [108, -175, -65, Math.PI / 1.35],    // Three.js Portfolio
-  [130, -155, 20, Math.PI / 2],     // Portfolio
-  [105, -142, 75, Math.PI / 3],      // Google Clone
-  [60, -130, 110, Math.PI / 7],     // Hulu Clone
+  [108, -175, -65, Math.PI / 1.35], // Three.js Portfolio
+  [130, -155, 20, Math.PI / 2], // Portfolio
+  [105, -142, 75, Math.PI / 3], // Google Clone
+  [60, -130, 110, Math.PI / 7], // Hulu Clone
 
-  [68, -188, -100, Math.PI / 1.15],  // Twitter Clone
-  [-10, -200, -115, Math.PI / .95],           // Readora
+  [68, -188, -100, Math.PI / 1.15], // Twitter Clone
+  [-10, -200, -115, Math.PI / 0.95], // Readora
 ];
 
 // Project names
@@ -511,7 +495,7 @@ const projectNames = [
   "Google Clone",
   "Hulu Clone",
   "Twitter Clone",
-  "Readora"
+  "Readora",
 ];
 
 const projectNameColors = [
@@ -525,88 +509,92 @@ const projectNameColors = [
   0xffffff, // Hulu Clone
   0x000000, // Twitter Clone
   0x000000, // Readora
-]
-
- // Project URLs
- const projectUrls = [
-  "https://day-ztrivia.vercel.app/",         // Perplexed
-  "https://day-zgamer.vercel.app/",         // Player One
-  "https://day-ztracker-react.vercel.app/",           // Nutrify
-  "https://self-driving-car-zkah.vercel.app/",             // ML Car
-  "https://first-three-js.vercel.app/",       // 3D Portfolio
-  "https://zyadalkurdi.com/",         // Portfolio
-  "https://day-z-search.vercel.app/",       // Google Clone
-  "https://hulu-cloned-mu.vercel.app/",         // Hulu Clone
-  "https://twitter-clone-steel-one.vercel.app/",      // Twitter Clone
-  "https://react-bookstore-zeta.vercel.app/"            // Readora
 ];
 
-positions.forEach((pos, index) => {
-  const overlayMaterial = new THREE.MeshBasicMaterial({
-    map: overlayTextures[index],
-    transparent: true,
-    opacity: 0.9,
-  });
+// Project URLs
+const projectUrls = [
+  "https://day-ztrivia.vercel.app/", // Perplexed
+  "https://day-zgamer.vercel.app/", // Player One
+  "https://day-ztracker-react.vercel.app/", // Nutrify
+  "https://self-driving-car-zkah.vercel.app/", // ML Car
+  "https://first-three-js.vercel.app/", // 3D Portfolio
+  "https://zyadalkurdi.com/", // Portfolio
+  "https://day-z-search.vercel.app/", // Google Clone
+  "https://hulu-cloned-mu.vercel.app/", // Hulu Clone
+  "https://twitter-clone-steel-one.vercel.app/", // Twitter Clone
+  "https://react-bookstore-zeta.vercel.app/", // Readora
+];
 
-  const plane = new THREE.Mesh(boxGeometry, overlayMaterial);
-  plane.position.set(pos[0], pos[1], pos[2]);
-  plane.rotation.y = pos[3];
+let textMeshes = [];
 
-  // Attach the project URL to the plane's userData
-  plane.userData.projectUrl = projectUrls[index];
-
-  scene.add(plane);
-  planes.push(plane);
-
-});
-
-const textMeshes = [];
-
-
-const fontLoader = new FontLoader();
-fontLoader.load('/optimer_bold.typeface.json', function (font) {
-
-  // Create text geometry and material for each project
-  projectNames.forEach((name, index) => {
-    const textGeometry = new TextGeometry(name, {
-      font: font,
-      size: 5,
-      height: 0.25,
-      curveSegments: 12,
-      bevelEnabled: false,
-    });
-
-    const textMaterial = new THREE.MeshBasicMaterial({ 
-      // color: projectNameColors[index],
+function addProjectsAndLabels() {
+  positions.forEach((pos, index) => {
+    const overlayMaterial = new THREE.MeshBasicMaterial({
+      map: overlayTextures[index],
       transparent: true,
       opacity: 0.9,
     });
-    const textMesh = new THREE.Mesh(textGeometry, textMaterial);
 
-    // Center the text geometry relative to its bounding box
-    textGeometry.computeBoundingBox();
-    const boundingBox = textGeometry.boundingBox;
-    const textWidth = boundingBox.max.x - boundingBox.min.x;
-    const textHeight = boundingBox.max.y - boundingBox.min.y;
+    const plane = new THREE.Mesh(boxGeometry, overlayMaterial);
+    plane.position.set(pos[0], pos[1], pos[2]);
+    plane.rotation.y = pos[3];
 
-    // Set text position and rotation manually based on the textPositions array
-    const textPos = textPositions[index];
-    textMesh.position.set(
-      textPos[0] - textWidth / 2, 
-      textPos[1] - textHeight / 2, 
-      textPos[2]
-    );
-    textMesh.rotation.y = textPos[3];
+    // Attach the project URL to the plane's userData
+    plane.userData.projectUrl = projectUrls[index];
 
-    // Initially hide the text
-    textMesh.visible = false;
-    textMeshes.push(textMesh); // Store the text mesh
-
-    // Add the text mesh to the scene
-    scene.add(textMesh);
+    scene.add(plane);
+    planes.push(plane);
   });
-});
 
+    fontLoader.load("/optimer_bold.typeface.json", function (font) {
+      projectNames.forEach((name, index) => {
+        const textGeometry = new TextGeometry(name, {
+          font: font,
+          size: 5,
+          height: 0.25,
+          curveSegments: 12,
+          bevelEnabled: false,
+        });
+  
+        const textMaterial = new THREE.MeshBasicMaterial({
+          color: projectNameColors[index],
+          transparent: true,
+          opacity: 0.75,
+        });
+        const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+  
+        textGeometry.computeBoundingBox();
+        const boundingBox = textGeometry.boundingBox;
+        const textWidth = boundingBox.max.x - boundingBox.min.x;
+        const textHeight = boundingBox.max.y - boundingBox.min.y;
+  
+        const textPos = textPositions[index];
+        textMesh.position.set(
+          textPos[0] - textWidth / 2,
+          textPos[1] - textHeight / 2,
+          textPos[2]
+        );
+        textMesh.rotation.y = textPos[3];
+  
+        textMesh.visible = false;
+        textMeshes.push(textMesh); 
+  
+        scene.add(textMesh);
+      });
+    });
+  }
+
+  function removeProjectsAndLabels() {
+    planes.forEach((plane) => {
+      scene.remove(plane);
+    });
+    planes = [];
+
+    textMeshes.forEach((textMesh) => {
+      scene.remove(textMesh);
+    });
+    textMeshes = [];
+  }
 
   const particlesGeometry = new THREE.BufferGeometry();
   const particlesCount = 5000;
@@ -630,74 +618,129 @@ fontLoader.load('/optimer_bold.typeface.json', function (font) {
 
   let scrollPosition = 0;
 
-  function addHtmlContent() {
-    const newContent = document.createElement('div');
-    newContent.classList.add('additional-content');
-    newContent.innerHTML = `
-      <h2>Welcome to the Experience Section!</h2>
-    `;
-  
-    // Append the new content to the body or a specific section of your HTML
-    document.body.appendChild(newContent);
-  }
-
   window.addEventListener("scroll", () => {
-      scrollPosition = window.scrollY;
+    scrollPosition = window.scrollY;
   });
 
-//   let previousScrollPosition = 0;
-//   let isAnimating = false;
-  
-//   window.addEventListener("scroll", () => {
-//       scrollPosition = window.scrollY;
-  
-//       // Detect if user is scrolling down or up
-//       const isScrollingDown = scrollPosition > previousScrollPosition;
-//       previousScrollPosition = scrollPosition;
-  
-//       // Trigger animation when scrolling down
-//       if (isScrollingDown && scrollPosition >= 6000 && !tweenComplete) {
-//           animateCameraToEarth();
-//       }
-  
-//       // Trigger reverse animation when scrolling back up
-//       if (!isScrollingDown && scrollPosition < 6000 && tweenComplete) {
-//           reverseCameraAnimation();
-//       }
-//   });
+  const reverseCameraAnimation = () => {
+    const blackOverlay = document.querySelector(".black-overlay");
 
-//   const reverseCameraAnimation = () => {
-//     if (isAnimating) return;  // Prevents overlapping tweens
-//     isAnimating = true;
-//     lines = createLines();
-//     scene.add(lines);
-//     const element = document.querySelector(".space");
+    blackOverlay.style.opacity = 1;
 
-//     new TWEEN.Tween(camera.position)
-//         .to({ x: 0, y: 0, z: 20 }, DURATION * ACCELERATION)
-//         .easing(TWEEN.Easing.Quadratic.InOut)
-//         .onUpdate(() => camera.lookAt(new THREE.Vector3(0, 0, 20)))  // Point the camera to the origin or desired object
-//         .onComplete(() => {
-//             // Restore original scene objects, add back space elements, etc.
-//             scene.add(sun, earthGroup, moon, stars, galaxy, sunLight, ambientLight);
-//             scene.remove(ground, earthLight, directionalLight, tree, grassGroup, particles);
-//             document.querySelector(".sidepanel").classList.remove("move__up");
-//             document.querySelector(".ScrollableContent").style.display = "none";
-//             scene.background = new THREE.Color(SPACE);
-//             element.style.display = "block";
-//             scene.remove(lines);
+    setTimeout(() => {
+      camera.position.set(0, 0, 20);
+      camera.lookAt(new THREE.Vector3(0, 0, 0));
 
-//             tweenComplete = false;  // Reset the tween complete flag
-//             isAnimating = false;  // Allow future animations
-//         })
-//         .start();
+      scene.add(sun, earthGroup, moon, stars, galaxy, sunLight, ambientLight);
+      scene.remove(
+        ground,
+        earthLight,
+        directionalLight,
+        tree,
+        grassGroup,
+        particles
+      );
+      scene.background = new THREE.Color(SPACE);
 
-//     function updateTweens() {
-//         requestAnimationFrame(updateTweens);
-//         TWEEN.update();
-//     }
-//     updateTweens();
-// };
+      removeProjectsAndLabels();
+      hardStop = false;
+
+      document.querySelector(".sidepanel").classList.remove("move__up");
+      document.querySelector(".ScrollableContent").style.display = "none";
+      document.querySelector(".space").style.display = "block";
+      document.querySelector(".rocket__ship").style.display = "none";
+      document.querySelector(".darkmode-toggle").style.display = "none";
+
+      scene.remove(lines);
+      tweenComplete = false;
+
+      setTimeout(() => {
+        blackOverlay.style.opacity = 0;
+      }, 500);
+    }, 500);
+  };
+
+  const rocketShip = document.querySelector(".rocket__ship img");
+  rocketShip.addEventListener("click", reverseCameraAnimation);
+
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+
+  let goTextMesh;
+  let isTextVisible = false;
+
+  fontLoader.load("/optimer_bold.typeface.json", function (font) {
+    const goTextGeometry = new TextGeometry("<section id='Projects'>", {
+      font: font,
+      size: 15,
+      height: 0.95,
+      curveSegments: 12,
+      bevelEnabled: false,
+    });
+
+    const goTextMaterial = new THREE.MeshBasicMaterial({
+      transparent: true,
+      opacity: 0,
+    });
+
+    goTextMesh = new THREE.Mesh(goTextGeometry, goTextMaterial);
+
+    goTextGeometry.computeBoundingBox();
+    const boundingBox = goTextGeometry.boundingBox;
+    const textWidth = boundingBox.max.x - boundingBox.min.x;
+    const textHeight = boundingBox.max.y - boundingBox.min.y;
+
+    const textPos = [0, -55, -200, 0];
+    goTextMesh.position.set(
+      textPos[0] - textWidth / 2,
+      textPos[1] - textHeight / 2,
+      textPos[2]
+    );
+    goTextMesh.rotation.y = textPos[3];
+
+    goTextMesh.scale.set(0.01, 0.01, 0.01);
+    goTextMesh.visible = true;
+
+    scene.add(goTextMesh);
+  });
+
+  function scaleUpText() {
+    new TWEEN.Tween(goTextMesh.scale)
+      .to({ x: 1, y: 1, z: 1 }, 500)
+      .easing(TWEEN.Easing.Elastic.Out)
+      .start();
+
+    new TWEEN.Tween(goTextMesh.material)
+      .to({ opacity: 0.9 }, 500)
+      .easing(TWEEN.Easing.Quadratic.InOut)
+      .start();
+  }
+
+  function scaleDownText() {
+    new TWEEN.Tween(goTextMesh.scale)
+      .to({ x: 0.01, y: 0.01, z: 0.01 }, 500)
+      .easing(TWEEN.Easing.Quadratic.InOut)
+      .start();
+
+    new TWEEN.Tween(goTextMesh.material)
+      .to({ opacity: 0 }, 500)
+      .easing(TWEEN.Easing.Quadratic.InOut)
+      .start();
+  }
+
+  window.addEventListener("click", onMouseClick, false);
+
+  function onMouseClick(event) {
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+
+    const intersects = raycaster.intersectObject(earth);
+    if (intersects.length > 0) {
+      animateCameraToEarth();
+    }
+  }
 
   const animateCameraToEarth = () => {
     lines = createLines();
@@ -715,82 +758,68 @@ fontLoader.load('/optimer_bold.typeface.json', function (font) {
       .easing(TWEEN.Easing.Quadratic.InOut)
       .onUpdate(() => camera.lookAt(earth.position))
       .onComplete(() => {
-      // Raycaster and Mouse Vector
-      const raycaster = new THREE.Raycaster();
-      const mouse = new THREE.Vector2();
 
-      // Hover effect variables
-      let INTERSECTED = null;
-      let CLICKED = null;
+        let INTERSECTED = null;
+        let CLICKED = null;
 
-      // Tweening function
-      const tweenScale = (object, to, duration) => {
-        new TWEEN.Tween(object.scale)
-          .to({ x: to, y: to, z: to }, duration)
-          .easing(TWEEN.Easing.Elastic.Out)
-          .start();
-      };
+        const tweenScale = (object, to, duration) => {
+          new TWEEN.Tween(object.scale)
+            .to({ x: to, y: to, z: to }, duration)
+            .easing(TWEEN.Easing.Elastic.Out)
+            .start();
+        };
 
-      // Handle hover and scaling animation
-      window.addEventListener("mousemove", (event) => {
-        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        window.addEventListener("mousemove", (event) => {
+          mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+          mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-        raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObjects(planes);
+          raycaster.setFromCamera(mouse, camera);
+          const intersects = raycaster.intersectObjects(planes);
 
-        if (intersects.length > 0) {
-          if (INTERSECTED != intersects[0].object) {
+          if (intersects.length > 0) {
+            if (INTERSECTED != intersects[0].object) {
+              if (INTERSECTED && INTERSECTED !== CLICKED) {
+                tweenScale(INTERSECTED, 1, 1500);
+              }
+
+              INTERSECTED = intersects[0].object;
+              if (INTERSECTED !== CLICKED) {
+                tweenScale(INTERSECTED, 1.1, 1500);
+              }
+
+              const index = planes.indexOf(INTERSECTED);
+              if (textMeshes[index]) {
+                textMeshes[index].visible = true;
+              }
+              document.body.style.cursor = "pointer";
+            }
+          } else {
             if (INTERSECTED && INTERSECTED !== CLICKED) {
-              tweenScale(INTERSECTED, 1, 1500);
+              tweenScale(INTERSECTED, 1, 5000);
+              const index = planes.indexOf(INTERSECTED);
+              if (textMeshes[index]) {
+                textMeshes[index].visible = false;
+              }
+              INTERSECTED = null;
             }
-
-            INTERSECTED = intersects[0].object;
-            if (INTERSECTED !== CLICKED) {
-              tweenScale(INTERSECTED, 1.1, 1500);
-            }
-
-            // Show the corresponding text on hover
-            const index = planes.indexOf(INTERSECTED);
-            if (textMeshes[index]) {
-              textMeshes[index].visible = true;
-            }
-            document.body.style.cursor = "pointer";
+            document.body.style.cursor = "auto";
           }
-        } else {
-          if (INTERSECTED && INTERSECTED !== CLICKED) {
-            tweenScale(INTERSECTED, 1, 5000);
-            const index = planes.indexOf(INTERSECTED);
-            if (textMeshes[index]) {
-              textMeshes[index].visible = false;
+        });
+
+        addProjectsAndLabels();
+
+        window.addEventListener("click", () => {
+          if (INTERSECTED) {
+            const projectUrl = INTERSECTED.userData.projectUrl;
+            if (projectUrl) {
+              window.open(projectUrl, "_blank");
             }
-            INTERSECTED = null;
           }
-          document.body.style.cursor = "auto";
-        }
-      });
+        });
 
-    // Handle clicks to open project URL
-  window.addEventListener("click", () => {
-    if (INTERSECTED) {
-      const projectUrl = INTERSECTED.userData.projectUrl;
-      if (projectUrl) {
-        window.open(projectUrl, "_blank"); // Open the project in a new tab
-      }
-    }
-  });
-
-
-  window.addEventListener("scroll", () => {
-    scrollPosition = window.scrollY;
-
-    if (
-      scrollPosition >= 6000 &&
-      !document.querySelector(".additional-content")
-    ) {
-      addHtmlContent();
-    }
-  });
+        window.addEventListener("scroll", () => {
+          scrollPosition = window.scrollY;
+        });
 
         scene.add(
           ground,
@@ -798,8 +827,135 @@ fontLoader.load('/optimer_bold.typeface.json', function (font) {
           directionalLight,
           tree,
           grassGroup,
-          particles,
+          particles
         );
+
+        scene.remove(
+          sun,
+          earthGroup,
+          moon,
+          stars,
+          galaxy,
+          lines,
+          sunLight,
+          ambientLight
+        );
+        camera.position.set(-3, 3, 3);
+        const toggleButton = document.querySelector(".darkmode-toggle");
+        toggleButton.style.display = "block";
+        let isDarkMode = true;
+        toggleButton.addEventListener("click", () => {});
+
+        const canvas = document.createElement("canvas");
+        canvas.width = 512;
+        canvas.height = 512;
+        const context = canvas.getContext("2d");
+
+        const updateGradient = () => {
+          const gradient = context.createLinearGradient(0, 0, 0, 512);
+          if (isDarkMode) {
+            gradient.addColorStop(0, "#000000");
+            gradient.addColorStop(1, "#4F6EDB");
+          } else {
+            gradient.addColorStop(0, "#B1B1B1");
+            gradient.addColorStop(1, "#4F6EDB");
+          }
+          context.fillStyle = gradient;
+          context.fillRect(0, 0, 512, 512);
+
+          const texture = new THREE.CanvasTexture(canvas);
+          scene.background = texture;
+        };
+
+        updateGradient();
+
+        toggleButton.addEventListener("click", () => {
+          isDarkMode = !isDarkMode;
+          updateGradient();
+        });
+
+        element.style.display = "none";
+        document.querySelector(".sidepanel").classList.add("move__up");
+        document.querySelector(".ScrollableContent").style.display = "block";
+        document.querySelector(".rocket__ship").style.display = "block";
+
+        tweenComplete = true;
+      })
+      .start();
+
+    function updateTweens() {
+      requestAnimationFrame(updateTweens);
+      TWEEN.update();
+    }
+    updateTweens();
+  };
+
+  let moonPopUpVisible = false;
+  let moonTextMesh;
+  let moonStopped = false;
+  let moonTextGeometry;
+
+  fontLoader.load("/optimer_bold.typeface.json", function (font) {
+    moonTextGeometry = new TextGeometry("<section id='Experience'>", {
+      font: font,
+      size: 5,
+      height: 0.5,
+      curveSegments: 12,
+      bevelEnabled: false,
+    });
+  
+    const moonTextMaterial = new THREE.MeshBasicMaterial({
+      transparent: true,
+      opacity: 0, 
+    });
+
+    moonTextMesh = new THREE.Mesh(moonTextGeometry, moonTextMaterial);
+    
+    moonTextMesh.scale.set(0.01, 0.01, 0.01);
+    moonTextMesh.visible = true;
+  
+    scene.add(moonTextMesh);
+
+  });
+
+  // Animate camera to moon
+  const animateCameraToMoon = () => {
+    lines = createLines();
+    scene.add(lines);
+
+    // the lines need to rotate to face the direction the user is going towards the moon
+    lines.rotation.y = Math.atan2(
+      moon.position.x - camera.position.x,
+      moon.position.z - camera.position.z
+    );
+
+    setTimeout(() => {
+      console.log("Moving camera to the moon...");
+    }, 1000);
+
+    const element = document.querySelector(".space");
+
+    new TWEEN.Tween(camera.position)
+      .to(
+        { x: moon.position.x * 0.95, y: moon.position.y * 0.95, z: moon.position.z * 0.95 },
+        DURATION * ACCELERATION
+      )
+      .easing(TWEEN.Easing.Quadratic.InOut)
+      .onUpdate(() => {
+        camera.lookAt(moon.position);
+      })
+      .onComplete(() => {
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        let INTERSECTED = null;
+        let CLICKED = null;
+
+        window.addEventListener("scroll", () => {
+          scrollPosition = window.scrollY;
+        });
+
+        scene.add(earthLight, directionalLight);
 
         scene.remove(
           sun,
@@ -815,7 +971,7 @@ fontLoader.load('/optimer_bold.typeface.json', function (font) {
 
         element.style.display = "none";
         document.querySelector(".sidepanel").classList.add("move__up");
-        document.querySelector(".ScrollableContent").style.display = "block";
+        document.querySelector(".rocket__ship").style.display = "block";
 
         tweenComplete = true;
       })
@@ -828,7 +984,103 @@ fontLoader.load('/optimer_bold.typeface.json', function (font) {
     updateTweens();
   };
 
-  window.addEventListener("scroll", onFirstScroll);
+  window.addEventListener("click", onMouseClick, false);
+
+  window.addEventListener("mousemove", (event) => { 
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+
+    const intersectsEarth = raycaster?.intersectObject(earth);
+    const intersectsMoon = raycaster?.intersectObject(moon);
+
+    if (intersectsEarth.length > 0) {
+      document.body.style.cursor = "pointer";
+      if (!isTextVisible) {
+        scaleUpText();
+        isTextVisible = true;
+      }
+    } else if (intersectsMoon.length > 0) {
+      document.body.style.cursor = "pointer";
+
+      if (!moonPopUpVisible) {
+        moonPopUpVisible = true;
+        moonStopped = true;
+
+        if (moonStopped) {
+
+          let zPosition = moon.position.z;
+          if (moon.position.z > 2) {
+            zPosition -= 5;
+          }
+
+          const textPos = [moon.position.x - 10, -3, zPosition, 0];
+          moonTextMesh.position.set(
+            textPos[0],
+            textPos[1],
+            textPos[2]
+          );
+        }
+  
+        new TWEEN.Tween(moonTextMesh.scale)
+        .to({ x: .25, y: .25, z: .25 }, 500)
+        .easing(TWEEN.Easing.Elastic.Out)
+        .start();
+
+      new TWEEN.Tween(moonTextMesh.material)
+        .to({ opacity: 1 }, 500)
+        .easing(TWEEN.Easing.Quadratic.InOut)
+        .start();
+  
+      }
+    } else {
+      document.body.style.cursor = "auto";
+
+      if (isTextVisible) {
+        scaleDownText();
+        isTextVisible = false;
+      }
+
+      if (moonPopUpVisible) {
+        moonPopUpVisible = false;
+  
+        new TWEEN.Tween(moonTextMesh.scale)
+        .to({ x: 0.01, y: 0.01, z: 0.01 }, 500)
+        .easing(TWEEN.Easing.Quadratic.InOut)
+        .start();
+
+      new TWEEN.Tween(moonTextMesh.material)
+        .to({ opacity: 0 }, 500)
+        .easing(TWEEN.Easing.Quadratic.InOut)
+        .start();
+  
+        moonStopped = false; 
+      }
+    }
+  });
+
+  function onMouseClick(event) {
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+
+    // Check for intersections with both the Earth and Moon
+    const intersectsEarth = raycaster.intersectObject(earth);
+    const intersectsMoon = raycaster.intersectObject(moon);
+
+    // If the Earth is clicked, animate camera to the Earth
+    if (intersectsEarth.length > 0) {
+      animateCameraToEarth();
+    }
+
+    // If the Moon is clicked, animate camera to the Moon and stop the moon from moving
+    if (intersectsMoon.length > 0) {
+      hardStop = true;
+      animateCameraToMoon();
+    }
+  }
 
   // Animate the scene
   const animate = () => {
@@ -848,28 +1100,8 @@ fontLoader.load('/optimer_bold.typeface.json', function (font) {
       if (scrollPosition >= 6000 && scrollPosition <= 6200) {
       } else if (scrollPosition >= 6200) {
         camera.position.y = -500;
-        scene.background = new THREE.Color(0x29160f);
         camera.lookAt(0, -20000, 0);
       } else {
-        // scene.background = new THREE.Color(0x448ee4);
-
-        const canvas = document.createElement("canvas");
-        canvas.width = 512;
-        canvas.height = 512;
-        const context = canvas.getContext("2d");
-
-        // Create gradient
-        const gradient = context.createLinearGradient(0, 0, 0, 512);
-        gradient.addColorStop(0, "#B1B1B1"); // White at the top
-        gradient.addColorStop(1, "#4F6EDB"); // Purple at the bottom
-
-        context.fillStyle = gradient;
-        context.fillRect(0, 0, 512, 512);
-
-        const texture = new THREE.CanvasTexture(canvas);
-        scene.background = texture;
-        // cameras y position goes down the tree as the user scrolls
-
         // the cameras x and z should go around the tree counter clockwise maintaining the same radius around the tree
         camera.position.x = 150 * Math.cos(-scrollPosition * 0.002);
         camera.position.z = 150 * Math.sin(-scrollPosition * 0.002);
@@ -981,7 +1213,7 @@ fontLoader.load('/optimer_bold.typeface.json', function (font) {
       document.querySelector(".loading__screen").style.display = "none";
       document.querySelector(".space").style.display = "block";
       document.querySelector(".sidepanel").style.display = "block";
-    }, 100);
+    }, 500);
 
     animate();
     window.addEventListener("resize", onWindowResize);
