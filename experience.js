@@ -216,7 +216,7 @@ async function main() {
     });
 
     sun = new THREE.Mesh(sunGeometry, sunMaterial);
-    sun.position.set(95, 50, -80);
+    sun.position.set(105, 50, -80);
 
     return sun;
   };
@@ -226,18 +226,91 @@ async function main() {
   scene.add(stars);
 
   // Create Galaxy
-  const createGalaxy = () => {
-    const galaxyGeometry = new THREE.SphereGeometry(65, 50, 50);
-    const galaxyMaterial = new THREE.MeshStandardMaterial({
-      color: 0x090808,
-      side: THREE.BackSide,
+const galaxySettings = {
+  count: 8000, 
+  size: 0.01, 
+  radius: 100, 
+  branches: 3,
+  spin: 1, 
+  randomness: 0.2, 
+  randomnessPower: 3,
+  insideColor: 0xff6030,
+  outsideColor: 0x1b3984 
+};
+
+let galaxyGeometry, galaxyMaterial, galaxyPoints, sunLightFigure;
+
+const createSunLight = () => {
+  const sunLightGeometry = new THREE.SphereGeometry(65, 50, 50);
+  const sunLightMaterial = new THREE.MeshStandardMaterial({
+    color: 0x090808,
+    side: THREE.BackSide,
     });
 
-    galaxy = new THREE.Mesh(galaxyGeometry, galaxyMaterial);
-    galaxy.position.set(90, 50, -50);
+    sunLightFigure = new THREE.Mesh(sunLightGeometry, sunLightMaterial);
+    sunLightFigure.position.set(90, 50, -50);
 
-    return galaxy;
+    return sunLightFigure;
   };
+
+// Create the galaxy
+const createGalaxy = () => {
+  // Geometry
+  galaxyGeometry = new THREE.BufferGeometry();
+  const positions = new Float32Array(galaxySettings.count * 3);
+  const colors = new Float32Array(galaxySettings.count * 3);
+
+  const insideColor = new THREE.Color(galaxySettings.insideColor);
+  const outsideColor = new THREE.Color(galaxySettings.outsideColor);
+
+  for (let i = 0; i < galaxySettings.count; i++) {
+    const i3 = i * 3;
+
+    // Position of the star
+    const radius = Math.random() * galaxySettings.radius;
+    const branchAngle = (i % galaxySettings.branches) / galaxySettings.branches * Math.PI * 2;
+    const spinAngle = radius * galaxySettings.spin;
+
+    const randomX = Math.pow(Math.random(), galaxySettings.randomnessPower) * (Math.random() < 0.5 ? 1 : -1);
+    const randomY = Math.pow(Math.random(), galaxySettings.randomnessPower) * (Math.random() < 0.5 ? 1 : -1);
+    const randomZ = Math.pow(Math.random(), galaxySettings.randomnessPower) * (Math.random() < 0.5 ? 1 : -1);
+
+    positions[i3] = Math.cos(branchAngle + spinAngle) * radius + randomX;
+    positions[i3 + 1] = randomY;
+    positions[i3 + 2] = Math.sin(branchAngle + spinAngle) * radius + randomZ;
+
+    // Color interpolation
+    const mixedColor = insideColor.clone();
+    mixedColor.lerp(outsideColor, radius / galaxySettings.radius);
+
+    colors[i3] = mixedColor.r;
+    colors[i3 + 1] = mixedColor.g;
+    colors[i3 + 2] = mixedColor.b;
+  }
+
+  galaxyGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  galaxyGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+  // Material
+  galaxyMaterial = new THREE.PointsMaterial({
+    size: galaxySettings.size,
+    sizeAttenuation: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    vertexColors: true
+  });
+
+  galaxyPoints = new THREE.Points(galaxyGeometry, galaxyMaterial);
+  galaxyPoints.rotateX(Math.PI / 4.75);
+  galaxyPoints.position.set(-140, -50, -80)
+  galaxyPoints.scale.set(.6, .6, .6);
+
+  return galaxyPoints;
+};
+
+const animateGalaxy = () => {
+  galaxyPoints.rotation.y += 0.001; 
+};
 
   // Create Lines
   function createLines() {
@@ -342,39 +415,6 @@ async function main() {
     tree.position.y = -300;
   });
 
-  const vertexShader = `
-  varying vec3 vNormal;
-  void main() {
-    vNormal = normalize(normalMatrix * normal);
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-  `;
-
-  const fragmentShader = `
-  uniform vec3 color;
-  varying vec3 vNormal;
-  void main() {
-    vec3 modifiedColor = color; // Use a single uniform color
-    gl_FragColor = vec4(modifiedColor, 1.0);
-  }
-  `;
-
-  // Updated uniforms
-  const uniforms = {
-    color: { type: "vec3", value: new THREE.Color(0xffff00) },
-  };
-
-  const sunMaterial = new THREE.ShaderMaterial({
-    vertexShader,
-    fragmentShader,
-    uniforms,
-  });
-
-  // Create on earth sun
-  const sunGeometry = new THREE.SphereGeometry(70, 25, 25);
-  sun2 = new THREE.Mesh(sunGeometry, sunMaterial);
-  sun2.position.set(-50, 90, -200);
-
   const grassGroup = new THREE.Group();
 
   loader.load("grass2.glb", (gltf) => {
@@ -449,7 +489,7 @@ async function main() {
 // Create box geometry
 const boxGeometry = new THREE.BoxGeometry(45, 40, 2);
 
-// Create overlay planes
+// 1verlay planes
 let planes = [];
 const positions = [
   [-100, -80, -20, Math.PI / 2.2],
@@ -631,7 +671,7 @@ function addProjectsAndLabels() {
       camera.position.set(0, 0, 20);
       camera.lookAt(new THREE.Vector3(0, 0, 0));
 
-      scene.add(sun, earthGroup, moon, stars, galaxy, sunLight, ambientLight);
+      scene.add(sun, earthGroup, moon, stars, galaxy, sunLight, ambientLight, sunLightFigure);
       scene.remove(
         ground,
         earthLight,
@@ -659,6 +699,63 @@ function addProjectsAndLabels() {
       }, 500);
     }, 500);
   };
+
+  function createShootingStar() {
+    const shootingStarGeometry = new THREE.SphereGeometry(0.05, 8, 8);
+    const shootingStarMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const shootingStar = new THREE.Mesh(shootingStarGeometry, shootingStarMaterial);
+
+    // Set random initial position for the star
+    shootingStar.position.set(
+        (Math.random() - 0.5) * 100,
+        (Math.random() - 0.5) * 100,
+        (Math.random() - 0.5) * 100
+    );
+
+    scene.add(shootingStar);
+
+    const trailPoints = new Float32Array(50 * 3);
+    const trailGeometry = new THREE.BufferGeometry();
+    trailGeometry.setAttribute('position', new THREE.BufferAttribute(trailPoints, 3));
+
+    const trailMaterial = new THREE.PointsMaterial({
+        color: 0xffffff,
+        size: 0.075,
+        transparent: true,
+        opacity: 0.7
+    });
+    const particles = new THREE.Points(trailGeometry, trailMaterial);
+    scene.add(particles);
+
+    const starPath = new TWEEN.Tween(shootingStar.position)
+        .to({
+            x: (Math.random() - 0.5) * 200,
+            y: (Math.random() - 0.5) * 200,
+            z: (Math.random() - 0.5) * 200
+        }, 2000) 
+        .onUpdate(() => {
+            for (let i = trailPoints.length - 3; i > 0; i -= 3) {
+                trailPoints[i] = trailPoints[i - 3];
+                trailPoints[i + 1] = trailPoints[i - 2];
+                trailPoints[i + 2] = trailPoints[i - 1];
+            }
+            trailPoints[0] = shootingStar.position.x;
+            trailPoints[1] = shootingStar.position.y;
+            trailPoints[2] = shootingStar.position.z;
+
+            trailGeometry.attributes.position.needsUpdate = true;
+        })
+        .onComplete(() => {
+            scene.remove(shootingStar);
+            scene.remove(particles);
+        });
+
+    starPath.start();
+  }
+
+  setInterval(() => {
+      createShootingStar();
+  }, 1500); 
 
   const rocketShip = document.querySelector(".rocket__ship img");
   rocketShip.addEventListener("click", reverseCameraAnimation);
@@ -838,7 +935,8 @@ function addProjectsAndLabels() {
           galaxy,
           lines,
           sunLight,
-          ambientLight
+          ambientLight,
+          sunLightFigure
         );
         camera.position.set(-3, 3, 3);
         const toggleButton = document.querySelector(".darkmode-toggle");
@@ -918,71 +1016,198 @@ function addProjectsAndLabels() {
 
   });
 
-  // Animate camera to moon
-  const animateCameraToMoon = () => {
-    lines = createLines();
-    scene.add(lines);
+// Animate camera to moon
+const animateCameraToMoon = () => {
 
-    // the lines need to rotate to face the direction the user is going towards the moon
-    lines.rotation.y = Math.atan2(
+  // Step 1: Tween to rotate the camera to face the moon first
+  const targetRotation = {
+    x: camera.rotation.x,
+    y: Math.atan2(
       moon.position.x - camera.position.x,
       moon.position.z - camera.position.z
+    ),
+    z: camera.rotation.z,
+  };
+
+  new TWEEN.Tween(camera.rotation)
+    .to({ x: targetRotation.x, y: targetRotation.y, z: targetRotation.z }, 500) 
+    .easing(TWEEN.Easing.Quadratic.InOut)
+    .onUpdate(() => {
+      camera.lookAt(moon.position);
+    })
+    .onComplete(() => {
+      setTimeout(() => {
+      lines = createLines();
+      scene.add(lines);
+
+      lines.rotation.y = Math.atan2(
+        moon.position.x - camera.position.x,
+        moon.position.z - camera.position.z
+      );
+
+      }, 500)
+      
+      new TWEEN.Tween(camera.position)
+        .to(
+          { x: moon.position.x, y: moon.position.y, z: moon.position.z + 0.85 },
+          DURATION * ACCELERATION + (moon.position.z * 0.01)
+        )
+        .easing(TWEEN.Easing.Quadratic.InOut)
+        .onUpdate(() => {
+          camera.lookAt(moon.position);
+        })
+        .onComplete(() => {
+          const raycaster = new THREE.Raycaster();
+          const mouse = new THREE.Vector2();
+
+          let INTERSECTED = null;
+          let CLICKED = null;
+
+          window.addEventListener("scroll", () => {
+            scrollPosition = window.scrollY;
+          });
+
+          scene.add(earthLight, directionalLight);
+
+          scene.remove(
+            sun,
+            earthGroup,
+            moon,
+            stars,
+            galaxy,
+            lines,
+            sunLight,
+            ambientLight,
+            sunLightFigure
+          );
+          camera.position.set(-3, 3, 3);
+
+          const element = document.querySelector(".space");
+          element.style.display = "none";
+          document.querySelector(".sidepanel").classList.add("move__up");
+          document.querySelector(".rocket__ship").style.display = "block";
+
+          tweenComplete = true;
+        })
+        .start();
+    })
+    .start();
+
+  // Continuously update all tweens
+  function updateTweens() {
+    requestAnimationFrame(updateTweens);
+    TWEEN.update();
+  }
+  updateTweens();
+};
+
+  let sunPopUpVisible = false;
+  let sunTextMesh;
+
+  fontLoader.load("/optimer_bold.typeface.json", function (font) {
+    const sunTextGeometry = new TextGeometry("<nav>", {
+      font: font,
+      size: 5,
+      height: 0.5,
+      curveSegments: 12,
+      bevelEnabled: false,
+    });
+
+    const sunTextMaterial = new THREE.MeshBasicMaterial({
+      transparent: true,
+      opacity: 0,
+      color: 0xffffff,
+    });
+
+    sunTextMesh = new THREE.Mesh(sunTextGeometry, sunTextMaterial);
+
+    // 105, 50, -80
+    const textPos = [40, 0, -40, 0];
+    sunTextMesh.position.set(
+      textPos[0],
+      textPos[1],
+      textPos[2]
     );
 
-    setTimeout(() => {
-      console.log("Moving camera to the moon...");
-    }, 1000);
 
-    const element = document.querySelector(".space");
+    sunTextMesh.scale.set(0.01, 0.01, 0.01);
+    sunTextMesh.visible = true;
 
-    new TWEEN.Tween(camera.position)
-      .to(
-        { x: moon.position.x * 0.95, y: moon.position.y * 0.95, z: moon.position.z * 0.95 },
-        DURATION * ACCELERATION
-      )
-      .easing(TWEEN.Easing.Quadratic.InOut)
-      .onUpdate(() => {
-        camera.lookAt(moon.position);
-      })
-      .onComplete(() => {
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
+    scene.add(sunTextMesh);
+  });
 
-        let INTERSECTED = null;
-        let CLICKED = null;
+ // Animate camera to sun
+const animateCameraToSun = () => {
 
-        window.addEventListener("scroll", () => {
-          scrollPosition = window.scrollY;
-        });
-
-        scene.add(earthLight, directionalLight);
-
-        scene.remove(
-          sun,
-          earthGroup,
-          moon,
-          stars,
-          galaxy,
-          lines,
-          sunLight,
-          ambientLight
-        );
-        camera.position.set(-3, 3, 3);
-
-        element.style.display = "none";
-        document.querySelector(".sidepanel").classList.add("move__up");
-        document.querySelector(".rocket__ship").style.display = "block";
-
-        tweenComplete = true;
-      })
-      .start();
-
-    function updateTweens() {
-      requestAnimationFrame(updateTweens);
-      TWEEN.update();
-    }
-    updateTweens();
+  const targetRotation = {
+    x: camera.rotation.x,
+    y: Math.atan2(
+      sun.position.x - camera.position.x,
+      sun.position.z - camera.position.z
+    ),
+    z: camera.rotation.z,
   };
+
+  new TWEEN.Tween(camera.rotation)
+    .to({ x: Math.PI / 6.5, y:-Math.PI / 4.5, z: targetRotation.z }, 1000)
+    .easing(TWEEN.Easing.Quadratic.InOut)
+    .onUpdate(() => {
+    })
+    .onComplete(() => {
+      setTimeout(() => {
+        
+        lines = createLines();
+        scene.add(lines);
+        
+        lines.rotation.y = Math.atan2(
+          sun.position.x - camera.position.x,
+          sun.position.z - camera.position.z
+        );
+      }, 750)
+
+      new TWEEN.Tween(camera.position)
+        .to(
+          { x: 80, y: sun.position.y * 0.95, z: -50 },
+          3100 * ACCELERATION
+        )
+        .easing(TWEEN.Easing.Quadratic.InOut)
+        .onUpdate(() => {
+          camera.lookAt(sun.position);
+        })
+        .onComplete(() => {
+          const element = document.querySelector(".space");
+
+          scene.add(earthLight, directionalLight);
+
+          scene.remove(
+            earthGroup,
+            moon,
+            stars,
+            galaxy,
+            lines,
+            sunLight,
+            ambientLight,
+            sun,
+            sunLightFigure
+          );
+          camera.position.set(-3, 3, 3);
+
+          element.style.display = "none";
+          document.querySelector(".sidepanel").classList.add("move__up");
+          document.querySelector(".rocket__ship").style.display = "block";
+
+          tweenComplete = true;
+        })
+        .start();
+    })
+    .start();
+
+  function updateTweens() {
+    requestAnimationFrame(updateTweens);
+    TWEEN.update();
+  }
+  updateTweens();
+};
 
   window.addEventListener("click", onMouseClick, false);
 
@@ -994,6 +1219,7 @@ function addProjectsAndLabels() {
 
     const intersectsEarth = raycaster?.intersectObject(earth);
     const intersectsMoon = raycaster?.intersectObject(moon);
+    const intersectsSun = raycaster?.intersectObject(sun);
 
     if (intersectsEarth.length > 0) {
       document.body.style.cursor = "pointer";
@@ -1034,6 +1260,23 @@ function addProjectsAndLabels() {
         .start();
   
       }
+    } else if (intersectsSun.length > 0) {
+      document.body.style.cursor = "pointer";
+
+      if (!sunPopUpVisible) {
+        sunPopUpVisible = true;
+
+        new TWEEN.Tween(sunTextMesh.scale)
+        .to({ x: 1, y: 1, z: 1 }, 500)
+        .easing(TWEEN.Easing.Elastic.Out)
+        .start();
+
+      new TWEEN.Tween(sunTextMesh.material)
+        .to({ opacity: 1 }, 500)
+        .easing(TWEEN.Easing.Quadratic.InOut)
+        .start();
+  
+      }
     } else {
       document.body.style.cursor = "auto";
 
@@ -1057,6 +1300,20 @@ function addProjectsAndLabels() {
   
         moonStopped = false; 
       }
+
+      if (sunPopUpVisible) {
+        sunPopUpVisible = false;
+  
+        new TWEEN.Tween(sunTextMesh.scale)
+        .to({ x: 0.01, y: 0.01, z: 0.01 }, 500)
+        .easing(TWEEN.Easing.Quadratic.InOut)
+        .start();
+
+      new TWEEN.Tween(sunTextMesh.material)
+        .to({ opacity: 0 }, 500)
+        .easing(TWEEN.Easing.Quadratic.InOut)
+        .start();
+      }
     }
   });
 
@@ -1066,9 +1323,10 @@ function addProjectsAndLabels() {
 
     raycaster.setFromCamera(mouse, camera);
 
-    // Check for intersections with both the Earth and Moon
+    // Check for intersections with both the Earth, Moon, and Sun
     const intersectsEarth = raycaster.intersectObject(earth);
     const intersectsMoon = raycaster.intersectObject(moon);
+    const intersectsSun = raycaster.intersectObject(sun);
 
     // If the Earth is clicked, animate camera to the Earth
     if (intersectsEarth.length > 0) {
@@ -1079,6 +1337,11 @@ function addProjectsAndLabels() {
     if (intersectsMoon.length > 0) {
       hardStop = true;
       animateCameraToMoon();
+    }
+
+    // If the Sun is clicked, animate camera to the Sun and stop the sun from moving
+    if (intersectsSun.length > 0) {
+      animateCameraToSun();
     }
   }
 
@@ -1131,6 +1394,8 @@ function addProjectsAndLabels() {
     if (sun) {
       sun.rotation.z += 0.05 * delta;
     }
+
+    animateGalaxy();
 
     if (stars) {
       stars.rotation.y -= 0.0002;
@@ -1193,7 +1458,7 @@ function addProjectsAndLabels() {
     }
   }, 50);
 
-  updateLoadingScreen();
+  
 
   // Initialize the scene
   const init = async () => {
@@ -1201,19 +1466,23 @@ function addProjectsAndLabels() {
     const earthGroup = await createEarth();
     const moon = await createMoon();
     const sun = await createSun();
-    const galaxy = createGalaxy();
+     galaxy = createGalaxy();
+    const sunLightFigure = createSunLight();
 
     scene.add(earthGroup);
     scene.add(moon);
     scene.add(sun);
     scene.add(stars);
     scene.add(galaxy);
+    scene.add(sunLightFigure);
 
     setTimeout(() => {
       document.querySelector(".loading__screen").style.display = "none";
       document.querySelector(".space").style.display = "block";
-      document.querySelector(".sidepanel").style.display = "block";
-    }, 500);
+      document.querySelector(".sidepanel").style.display = "none";
+    }, 2500);
+
+    updateLoadingScreen();
 
     animate();
     window.addEventListener("resize", onWindowResize);
@@ -1225,10 +1494,16 @@ function addProjectsAndLabels() {
 main().catch(console.error);
 
 /*
-  TODO: Enhance loading screen
-        Make a cool three.js navigation where it has cool effects on hover of each one and it takes up the whole screen
+  TODO: 
+        Make a cool three.js navigation where it has cool effects on hover of each one and it takes up the whole screen in the SUN
+        Make a moon scene in blender and export + bake it to a glb file and add it to the scene
+            Add Experiences to the moon with physics and let the player drive a rover on the moon
+        Add a mini sun to the top right of earth and moon since its the nav
+        Add a galaxy in the background
+
+  ENHANCEMENTS:
         Enhance the projects section, make them have better hover effects and maybe use post processing
-        Complete projects section by allow the user to click on them for a more detailed view and hyperlink
-        Add work experience section in the ground following the tree
+        Enhance loading screen
+        Animation effect upon each arrival of a planet
 
 */
