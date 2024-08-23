@@ -214,48 +214,8 @@ text-align: center;
 width: 500px;
 opacity: 0;
 }
-
-.sidepanel {
-z-index: 100;
-padding: 0 20px;
-position: fixed;
-top: 50%;
-border-right: 4px solid white;
-border-radius: 9999px 0 0 9999px;
-display: none;
-}
-
 .move__up {
 transform: translateY(-50%);
-}
-
-.panel__container{
-display:flex;
-height: 180px;
-flex-direction: column;
-justify-content: space-between;
-align-items: center;
-}
-
-.panel__link {
-color: black;
-background: white;
-text-decoration: none;
-font-size: 1.5rem;
-border: 2px solid white;
-border-radius: 9999px;
-height: 40px;
-width: 40px;
-display: flex;
-justify-content: center;
-align-items: center;
-transition: all .1s ease-in;
-}
-
-.panel__link:hover {
-background: black;
-color: white;
-border: 2px solid black;
 }
 
 .loading__screen {
@@ -450,3 +410,81 @@ input:checked + label svg.moon {
 input:checked + label svg.sun {
   fill: #fff;
 }
+
+#nav {
+  display: none;
+}
+
+nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: none;
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  color: white;
+  z-index: 50;
+  padding: 32px;
+}
+
+nav li {
+  font-size: 4rem;
+  border-bottom: 4px solid white;
+  letter-spacing: 4px;
+  padding: 20px;
+  width: 50%;
+}
+
+nav li:hover {
+  background: white;
+  color: black;
+  transition: all 0.25s ease-in;
+  cursor: pointer;
+}
+
+.sidepanel {
+    display: none;
+    width: 100px;
+
+  }
+  
+  .panel__container{
+    display:flex;
+    height: 180px;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  #home {
+    display: flex;
+
+  }
+
+  #home a {
+    margin-left: 24px;
+  }
+  
+  .panel__link {
+    color: black;
+    background-color: white;
+    text-decoration: none;
+    font-size: 1.5rem;
+    border-radius: 9999px;
+    height: 60px;
+    width: 60px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all .1s ease-in;
+  }
+
+  .panel__link:hover {
+    background: black;
+    color: white;
+    border: 2px solid black;
+  }
+  
