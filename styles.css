@@ -147,11 +147,15 @@ border: 2px solid black;
 
 .intro__scroll {
 position: absolute;
-bottom: 3%;
+top: 25%;
 left: 50%;
 transform: translateX(-50%);
 font-size: 2rem;
 color: white;
+opacity: 0;
+transition: opacity 1s ease-in-out;
+z-index: 1000;
+scale: 1.15;
 }
 
 .intro__scroll__bar {
