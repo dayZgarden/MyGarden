@@ -22,7 +22,7 @@
     <div class="loading__screen__container__text">Welcome to My Garden</div>
   </div>
 
-  <!-- <div class="credit">
+  <div class="credit">
     <h1 class="credit__text">Made with <i class="fas fa-heart"></i> and <i class="fas fa-coffee"></i> by Zyad Alkurdi</h1>
     <li class="skills__list">
       <div class="item">
@@ -51,7 +51,7 @@
       </div>
       
     </li>
-  </div> -->
+  </div>
 
   <div class="space">
     <div class="translate-text">
@@ -67,7 +67,7 @@
   <div class="black-overlay"></div>
 
   <input id="darkmode-toggle" type="checkbox">
-  <label for="darkmode-toggle" class="darkmode-toggle">
+  <label id="label" for="darkmode-toggle" class="darkmode-toggle">
     <svg class="moon" enable-background="new 0 0 512 512" height="512px" id="Calque_1" version="1.1" viewBox="0 0 512 512" width="512px"
       xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
       <g>
@@ -179,24 +179,38 @@
     <section id="nav">
       <nav>
         <ul>
-          <li id="contact" onclick="navigate('Contact')">CONTACT</li>
-          <li id="projects" onclick="navigate('Projects')">PROJECTS</li>
-          <li id="experience" onclick="navigate('Experience')">EXPERIENCE</li>
-          <li id="skills" onclick="navigate('Skills')">SKILLS</li>
-          <li id="home">
-            <a class="panel__link" target="_blank" href="https://github.com/dayZgarden">
-              <i class="fab fa-github"></i>
-            </a>
-            <a class="panel__link" target="_blank" href="https://www.linkedin.com/in/zyadalkurdi">
-              <i class="fab fa-linkedin"></i>
-            </a>
-            <a class="panel__link" href="/"><i class="fas fa-home"></i></a>
-          </li>
+          <li class="nav__link" id="contact" onclick="navigate('Contact')">CONTACT</li>
+          <li class="nav__link" id="projects" onclick="navigate('Projects')">PROJECTS</li>
+          <li class="nav__link" id="experience" onclick="navigate('Experience')">EXPERIENCE</li>
+          <li class="nav__link" id="skills" onclick="navigate('Skills')">SKILLS</li>
+          <li  id="home"><a class="nav__link" href="/">HOME</a></li>
         </ul>
       </nav>
     </section>
-    
 
+    <section id="Contact">
+      <div class="contact__container">
+        <div class="card">
+            <form action="" class="contact">
+              <div class="card__top">
+                <h1 style="font-size: 32px;">Contact Me</h1>
+                <div>
+                  <a class="panel__link" target="_blank" href="https://github.com/dayZgarden"><i class="fab fa-github"></i></a>
+                  <a class="panel__link" target="_blank" href="https://www.linkedin.com/in/zyadalkurdi"><i class="fab fa-linkedin"></i></a>
+                </div>
+              </div>
+              <h1 for="name">Name</h1>
+              <input type="text" name="name" id="name" placeholder="Name">
+              <h1 for="email">Email</h1>
+              <input type="email" name="email" id="email" placeholder="Email">
+              <h1 for="message">Message</h1>
+              <textarea class="textarea" name="message" id="message" cols="30" rows="10" placeholder="Message"></textarea>
+              <button class="button">Get in Touch</button>
+            </form>
+        </div>
+      </div>
+    </section>
+    
         <!-- <div class="sidepanel">
           <div class="panel__container">
               <a class="panel__link" href="/"><i class="fas fa-home"></i></a>
