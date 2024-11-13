@@ -1945,7 +1945,10 @@ const animateCameraToSun = (isTeleport) => {
     requestAnimationFrame(animate);
     controls.update();
     const delta = clock.getDelta();
-    moonOrbitEarth();
+
+    if (moon) {
+      moonOrbitEarth();
+    }
     TWEEN.update();
     mixers.forEach(mixer => mixer.update(delta));
 
@@ -1999,7 +2002,9 @@ const animateCameraToSun = (isTeleport) => {
       resume.rotation.y += 0.85 * delta;
     }
 
-    animateGalaxy();
+    if (galaxy) {
+      animateGalaxy();
+    }
 
     if (stars) {
       stars.rotation.y -= 0.0002;
@@ -2085,10 +2090,9 @@ const animateCameraToSun = (isTeleport) => {
     scene.add(galaxy);
     scene.add(sunLightFigure);
 
-    setTimeout(() => {
-      document.querySelector(".loading__screen").style.display = "none";
-      document.querySelector(".space").style.display = "block";
-    }, 500);
+    document.querySelector(".loading__screen").style.display = "none";
+    document.querySelector(".space").style.display = "block";
+  
 
     updateLoadingScreen();
 
