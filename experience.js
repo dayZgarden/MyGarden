@@ -338,7 +338,7 @@ const createGalaxy = () => {
     astronautModel = await loadModel("/astronaut.glb");
     astronautModel.scene.scale.set(5.5, 5.5, 5.5);
     astronautModel.scene.position.set(-35, 10, -100);
-    astronautModel.scene.rotation.y = Math.PI /5;
+    astronautModel.scene.rotation.y = -Math.PI / 5;
   
     const mixer = new THREE.AnimationMixer(astronautModel.scene);
     const animations = astronautModel.animations;
@@ -709,7 +709,7 @@ function addProjectsAndLabels() {
 
       astronautModel.scene.scale.set(5.5, 5.5, 5.5);
       astronautModel.scene.position.set(-35, 10, -100);
-      astronautModel.scene.rotation.y = Math.PI /5;
+      astronautModel.scene.rotation.y = -Math.PI / 5;
 
       scene.remove(lines);
       tweenComplete = false;
@@ -1172,6 +1172,49 @@ function addProjectsAndLabels() {
       }
   };
 
+  const skills = [
+    'react',
+    'typescript',
+    'html',
+    'css',
+    'python',
+    'java',
+    'c++',
+  ]
+
+  const createPlanet = (radius, skill, x, z) => {
+    const planetGeometry = new THREE.SphereGeometry(radius, 32, 32);
+    const planetMaterial = new THREE.MeshStandardMaterial({
+      color: 0x000000,
+      roughness: 0.8,
+      metalness: 0.2,
+    });
+    
+    const planet = new THREE.Mesh(planetGeometry, planetMaterial);
+    planet.position.set(x, 0, z);
+    planet.userData.skill = skill;
+
+    scene.add(planet);
+
+    return planet;
+
+  }
+
+  const createSkillPlanets = () => {
+    const skillPlanets = [];
+    const radius = 50;
+    const angle = (Math.PI * 2) / skills.length;
+
+    skills.forEach((skill, index) => {
+      const x = 1
+      const z = 14
+      const planet = createPlanet(1, skill, x, z);
+      skillPlanets.push(planet);
+    });
+
+    return skillPlanets;
+  }
+
   const galaxyFunctionality = () => {
 
     onGalaxy = true;
@@ -1193,10 +1236,10 @@ function addProjectsAndLabels() {
     );
     camera.position.set(-3, 3, 3);
 
+
     const element = document.querySelector(".space");
     element.style.display = "none";
     document.querySelector(".rocket__ship").style.display = "block";
-    document.querySelector(".credit").style.display = "block";
 
   }
 
@@ -1216,7 +1259,7 @@ function addProjectsAndLabels() {
 
       new TWEEN.Tween(camera.rotation)
         .to(
-          { x: targetRotation.x, y: targetRotation.y, z: targetRotation.z },
+          { x: targetRotation.x, y: targetRotation.y, z: targetRotation.z},
           1000
         )
         .easing(TWEEN.Easing.Quadratic.InOut)
@@ -1224,22 +1267,12 @@ function addProjectsAndLabels() {
           camera.lookAt(astronautModel.scene.position);
         })
         .onComplete(() => {
-          setTimeout(() => {
-            lines = createLines();
-            scene.add(lines);
-
-            lines.rotation.y = Math.atan2(
-              astronautModel.scene.position.x - camera.position.x,
-              astronautModel.scene.position.z - camera.position.z
-            );
-          }, 750);
-
           new TWEEN.Tween(camera.position)
             .to(
               {
-                x: astronautModel.scene.position.x - 5,
-                y: astronautModel.scene.position.y + 10,
-                z: astronautModel.scene.position.z + 5,
+                x: astronautModel.scene.position.x - 25,
+                y: astronautModel.scene.position.y + 20,
+                z: astronautModel.scene.position.z + 25,
               },
               DURATION * ACCELERATION
             )
@@ -1611,6 +1644,7 @@ const animateCameraToSun = (isTeleport) => {
     element.style.display = "none";
     document.querySelector(".rocket__ship").style.display = "block";
     document.getElementById("nav").style.display = "block";
+    document.getElementById('Contact').style.display = "none"
   };
 
   window.addEventListener("click", onMouseClick, false);

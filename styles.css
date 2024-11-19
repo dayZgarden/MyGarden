@@ -448,6 +448,10 @@ nav {
   cursor: pointer;
 }
 
+.nav__link:hover a {
+  color: black;
+}
+
 #Contact {
   display: none;
 }
